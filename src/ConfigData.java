@@ -26,7 +26,6 @@ public class ConfigData {
 
 	public ConfigData() {
 		pathOfConfig = System.getProperty("user.dir");
-		System.out.println("The path of the invoked " + pathOfConfig);
 	}
 	
 	
@@ -78,7 +77,6 @@ public class ConfigData {
 			if (dataReader != null) {
 				dataReader.close();
 			}
-
 		}
 	}
 
