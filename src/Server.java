@@ -1,11 +1,14 @@
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.Semaphore;
+
+import javax.xml.soap.SAAJMetaFactory;
 
 public class Server {
 
 	private ConfigData data;
-
+	private Semaphore threadPool = new Semaphore(data.getMaxThreads());
 	public Server() {
 		data = new ConfigData();
 		try {
@@ -24,25 +27,27 @@ public class Server {
 		Socket client = null;
 		try {
 			serverSocket = new ServerSocket(data.getPort());
-
+			
 			// Process HTTP service requests in an infinite loop.
 			while (true) {				
+				threadPool.acquire();
 				// Listen for a TCP connection request.
 				client = serverSocket.accept();
 
 				// TODO: thread safe 
 				
 				// Construct an object to process the HTTP request message.
-				HttpRequest request = new HttpRequest(client, data);
-
+				HttpRequest request = new HttpRequest(client, data, threadPool);
+				
 				// Create a new thread to process the request.
 				Thread thread = new Thread(request);
 
 				// Start the thread.
 				thread.start();
 				
+				
 			}
-		} catch (IOException e) {			
+		} catch (IOException | InterruptedException e) {			
 			System.out.println("Error in server initialization\nServer is shutting down...");
 		} finally {
 			

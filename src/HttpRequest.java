@@ -6,6 +6,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.concurrent.Semaphore;
+
+import javax.xml.crypto.dsig.keyinfo.KeyValue;
 
 public class HttpRequest implements Runnable {
 
@@ -20,13 +23,15 @@ public class HttpRequest implements Runnable {
 	private final static String CRLF = "\r\n";// CLRF “\r” == 0x0d ; [LF] ==
 												// “\n” == 0x0a
 
-	Socket clientSocket;
-	ConfigData data;
+	private Socket clientSocket;
+	private ConfigData data;
+	private Semaphore threadPool;
 
 	// Constructor
-	public HttpRequest(Socket socket, ConfigData data) {
+	public HttpRequest(Socket socket, ConfigData data, Semaphore threadPool) {
 		clientSocket = socket;
 		this.data = data;
+		this.threadPool = threadPool;
 		initDictionary();
 	}
 
@@ -46,6 +51,9 @@ public class HttpRequest implements Runnable {
 		} catch (Exception e) {
 			System.out.println(e);
 		}
+		finally {
+			threadPool.release();
+		}
 	}
 
 	private void processRequest() throws Exception {
@@ -64,18 +72,8 @@ public class HttpRequest implements Runnable {
 		System.out.println(clientRequestArray[0]);
 		// TODO: Check validity of header
 		if (clientRequestArray[0].startsWith("GET")) { // GET request
-			String pageRequest = extractPageFromRequest(clientRequestArray[0]);
-			File requestedPageFile = new File(data.getRoot() + File.separator + pageRequest);
-
-			if (requestedPageFile.exists()) {
-				// 200_OK
-				// read content
-				responseHandler(HttpResponseCode.OK_200, requestedPageFile);
-			} else {
-				// TODO: return 404
-				responseHandler(HttpResponseCode.NOT_FOUND_404, null);
-			}
-		} else if (clientRequestArray[0].startsWith("POST")) {
+			getHandler(clientRequestArray);
+		} else if (clientRequestArray[0].startsWith("POST")) { // POST
 
 		} else {
 			// TODO: return 501
@@ -85,6 +83,28 @@ public class HttpRequest implements Runnable {
 		clientSocket.close();
 	}
 
+	private void getHandler(String[] clientRequestArray) {
+		File requestedPageFile;
+		requestedPageFile = new File(data.getRoot() + File.separator + extractPageFromRequest(clientRequestArray[0]));
+		if (requestedPageFile.exists()) {
+			String extension = getExtension(requestedPageFile);
+			
+			if(contentType.containsKey(extension.toLowerCase().trim())) {
+			// 200_OK
+			responseHandler(HttpResponseCode.OK_200, requestedPageFile);
+			}
+			else {
+				//TODO : not supported
+				responseHandler(HttpResponseCode.BAD_REQUEST_400, null);
+			}
+		}
+
+		else {
+			// TODO: return 404
+			responseHandler(HttpResponseCode.NOT_FOUND_404, null);
+		}
+	}
+	
 	private String extractPageFromRequest(String header) {
 		String pageToReturn = null;
 		String substringHeader = header.substring(header.indexOf('/') + 1, header.indexOf("HTTP"));
@@ -96,6 +116,21 @@ public class HttpRequest implements Runnable {
 		}
 
 		return pageToReturn;
+	}
+
+	private String getExtension(File requestedPage) {
+		
+		String path = requestedPage.getPath();
+		String extension = "";
+		
+		int indexLastPoint = path.lastIndexOf('.') + 1;
+		
+		if (indexLastPoint != -1 && path.length() > indexLastPoint) {
+			extension = path.substring(indexLastPoint);
+		}
+		
+		return extension;
+		
 	}
 
 	private void responseHandler(HttpResponseCode typeOfResponse, File requestedPage) {
@@ -113,13 +148,12 @@ public class HttpRequest implements Runnable {
 			break;
 		// TODO: get the right size of page size of page
 		case NOT_FOUND_404:
-			//pageContent = createHtmlFormat(NOT_FOUND_404);
-			httpResponse.append("HTTP/1.0 " + NOT_FOUND_404 + CRLF);
-			// httpResponse.append("Content-Type: text/html" + CRLF);
-			// httpResponse.append("Content-Length: " + pageContentStr.length()
-			// + CRLF);
-			//httpResponse.append(CRLF);
-			// httpResponse.append(pageContentStr);
+			pageContent = createHtmlFormat(NOT_FOUND_404);
+			httpResponse.append("HTTP/1.1 " + NOT_FOUND_404 + CRLF);
+			httpResponse.append("Content-Type: text/html" + CRLF);
+			httpResponse.append("Content-Length: " + pageContent.length + CRLF);
+			httpResponse.append(CRLF);
+			// httpResponse.append(pageContent);
 			break;
 		case NOT_IMPLEMENTED_501:
 			httpResponse.append("HTTP/1.0 " + NOT_IMPLEMENTED_501 + CRLF);
@@ -130,7 +164,7 @@ public class HttpRequest implements Runnable {
 			httpResponse.append("HTTP/1.0 " + BAD_REQUEST_400 + CRLF);
 			httpResponse.append(CRLF);
 			httpResponse.append(createHtmlFormat(BAD_REQUEST_400 + CRLF));
-
+			pageContent = createHtmlFormat(BAD_REQUEST_400);
 			break;
 		case INTERNAL_SERVER_ERROR_500:
 			break;
@@ -144,7 +178,8 @@ public class HttpRequest implements Runnable {
 	}
 
 	private byte[] createHtmlFormat(String text) {
-		String entityBody = "<HTML>" + "<HEAD><TITLE>" + text + "</TITLE></HEAD>" + "<BODY><H1>" + text + "</H1></BODY></HTML>";
+		String entityBody = "<HTML>" + "<HEAD><TITLE>" + text + "</TITLE></HEAD>" + "<BODY><H1>" + text
+				+ "</H1></BODY></HTML>";
 		byte[] entityAsByteArray = new byte[entityBody.length()];
 		for (int i = 0; i < entityBody.length(); i++) {
 			entityAsByteArray[i] = (byte) entityBody.charAt(i);
@@ -164,7 +199,8 @@ public class HttpRequest implements Runnable {
 
 			System.out.println("Size is: " + pageContent.length);
 		} catch (Exception e) {
-			// TODO: handle exception
+			System.out.println("Error in reading request page!");
+			sendMessageToClient(INTERNAL_SERVER_ERROR_500, createHtmlFormat(INTERNAL_SERVER_ERROR_500));
 
 		} finally {
 			if (fileReader != null) {
@@ -172,7 +208,7 @@ public class HttpRequest implements Runnable {
 					fileReader.close();
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
-					e.printStackTrace();
+					System.out.println("Error in closing resources!");
 				}
 			}
 		}
@@ -191,29 +227,21 @@ public class HttpRequest implements Runnable {
 			writerToClient.writeBytes(responseMessage);
 
 			if (pageContent != null) {
-				System.out.println("Sending content to Client!");
 				writerToClient.write(pageContent);
-				
-				for (int i = 0; i < pageContent.length; i++) {
-					System.out.print((char)pageContent[i]);
-				}
-			}			
+				writerToClient.flush();
+			}
 
-			writerToClient.flush();
-
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
+		} catch (IOException e) {		
+			System.out.println("Error in writing response to client!");
 			// TODO: if connection is closed while closing
-			e.printStackTrace();
 		} finally {
 			try {
 				if (writerToClient != null) {
 					writerToClient.close();
 				}
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				// Error in closing resources
-				e.printStackTrace();
+				System.out.println("Error in closing client output stream!");
 			}
 		}
 	}
