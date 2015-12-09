@@ -57,20 +57,6 @@ public class HttpRequest implements Runnable {
 			threadPool.release();
 		}
 	}
-	
-	
-//	private String readRequestFromClient() throws IOException {
-//		String inputMessage;
-//		StringBuilder requestHeaders = new StringBuilder();
-//		BufferedReader inputStream = new BufferedReader(new InputStreamReader(m_Socket.getInputStream()));
-//		while((inputMessage = inputStream.readLine()) != null && inputMessage.length() > 0) {
-//			System.out.println(inputMessage);
-//			requestHeaders.append(inputMessage).append(CRLF);
-//		}
-//		System.out.println();
-//		requestHeaders.append(CRLF);
-//		return requestHeaders.toString();
-//	}
 
 	private void processRequest() throws Exception {
 
@@ -103,7 +89,7 @@ public class HttpRequest implements Runnable {
 	private void getHandler(String[] clientRequestArray) {
 		File requestedPageFile;
 		requestedPageFile = new File(data.getRoot() + File.separator + extractPageFromRequest(clientRequestArray[0]));
-		
+		updateGetParamaters(clientRequestArray[0]);
 		if (requestedPageFile.exists()) {
 			String extension = getExtension(requestedPageFile);
 			
@@ -144,6 +130,7 @@ public class HttpRequest implements Runnable {
 	}
 	
 	private String extractPageFromRequest(String header) {
+		System.out.println("Before: " + header);
 		String pageToReturn = null;
 		String substringHeader = header.substring(header.indexOf('/') + 1, header.indexOf("HTTP"));
 		int indexOfQuestion = substringHeader.indexOf('?');
@@ -153,6 +140,11 @@ public class HttpRequest implements Runnable {
 			pageToReturn = substringHeader;
 		}
 
+		if (pageToReturn.contains("../")) {
+			int indexOfForbidden = pageToReturn.indexOf("../");
+			pageToReturn = pageToReturn.substring(0, indexOfForbidden - 1) + pageToReturn.substring(indexOfForbidden + 2); 
+		}
+		System.out.println("Page to return: " + pageToReturn);
 		return pageToReturn;
 	}
 
