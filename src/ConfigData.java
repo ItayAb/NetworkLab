@@ -61,12 +61,7 @@ public class ConfigData {
 			while (dataReader.ready()) {
 				lineInput = dataReader.readLine();
 				parserInputLine(lineInput);
-				// Debug TODO: 
-				//System.out.println(lineInput);
 			}
-
-			// TODO: debug purposes
-			//sanityCheck();
 		} finally {
 			if (in != null) {
 				in.close();
@@ -78,16 +73,6 @@ public class ConfigData {
 				dataReader.close();
 			}
 		}
-	}
-
-	// TODO: remove this method
-	private void sanityCheck() {
-		System.out.println();
-		System.out.println("Sanity Check");
-		System.out.println("port: " + port);
-		System.out.println("root: " + root);
-		System.out.println("defaultPage: " + defaultPage);
-		System.out.println("maxThreads: " + maxThreads);
 	}
 
 	private void parserInputLine(String lineOfInput) throws Exception {

@@ -8,15 +8,15 @@ import javax.xml.soap.SAAJMetaFactory;
 public class Server {
 
 	private ConfigData data;
-	private Semaphore threadPool = new Semaphore(data.getMaxThreads());
+	private Semaphore threadPool;
 	public Server() {
 		data = new ConfigData();
 		try {
 			data.Load();
+			threadPool = new Semaphore(data.getMaxThreads());
 		} catch (Exception e) {
 			System.out.println("Could not open Server!");
 			System.out.println("Error in loading data! please check config.ini");
-			System.out.println("Error " + e.getMessage());
 			System.out.println("Server will shut down...");
 		}
 	}
