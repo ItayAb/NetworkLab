@@ -42,8 +42,9 @@ public class MailNotifierDataLoader {
 				lineInput = dataReader.readLine();
 				fileContent.append(lineInput);
 			}
+			
 			updateData(fileContent);
-			isLoaded = true;
+			
 		} catch (Exception e) {
 			System.out.println("Error in loading data for the mail notifier!");
 
@@ -71,19 +72,25 @@ public class MailNotifierDataLoader {
 		for (int i = 0; i < content.length && !done; i++) {
 			if (content[i].contains("=")) {
 				done = true;
-				result = content[i].substring(content[i].indexOf("=")+1).trim();
+				String email = content[i].substring(content[i].indexOf("=")+1).trim(); 
+				if (!email.isEmpty()) {
+					result = email;
+				}
 			}
 		}
 		
-		if (!checkValidEmail(result)) {
+		if (!isValidEmail(result)) {
 			throw new IllegalArgumentException();
 		}
 		
+		if (result != null) {
+			isLoaded = true;
+		}
+		
 		recipient = result;
-
 	}
 	
-	private boolean checkValidEmail(String emailToCheck){
+	private boolean isValidEmail(String emailToCheck){
 		int indexOfWhiteSpace = emailToCheck.indexOf(" ");
 		int indexOfShtrudel = emailToCheck.indexOf("@");
 		int lastIndexOfDot = emailToCheck.lastIndexOf(".");

@@ -30,6 +30,7 @@ public class MailNotifier {
 
 	// send message only if isLoaded==true
 	public void SendEmail(){
+		
 		if (dataLoader.IsLoaded()) {
 			String to = dataLoader.Recipient();
 			final String from = "";
@@ -41,6 +42,7 @@ public class MailNotifier {
 			props.put("mail.smtp.password", password); // password
 			props.put("mail.smtp.port", "587");
 			props.put("mail.smtp.auth", "true");
+			
 			Session session = Session.getDefaultInstance(props, new javax.mail.Authenticator(){
 		        protected PasswordAuthentication getPasswordAuthentication() {
 		            return new PasswordAuthentication(

@@ -24,6 +24,17 @@ public class Server {
 			System.out.println("Error in loading data! please check config.ini");
 			System.out.println("Server will shut down...");
 		}
+	}	
+	
+	private void sendMail(){		
+		if (!isMailSent && mailNotfiyService.IsServiceAvailabe()) {
+			synchronized (lock) { // TODO: check if lock is a good way to multi thread
+				if (!isMailSent && mailNotfiyService.IsServiceAvailabe()) {
+					isMailSent = true;
+					mailNotfiyService.SendEmail();
+				}
+			}
+		}
 	}
 	
 	public void Begin() {
@@ -31,20 +42,14 @@ public class Server {
 		ServerSocket serverSocket = null;
 		Socket client = null;
 		try {
-			serverSocket = new ServerSocket(data.getPort());
-			
+			serverSocket = new ServerSocket(data.getPort());			
 			// Process HTTP service requests in an infinite loop.
 			while (true) {				
 				threadPool.acquire();
 				// Listen for a TCP connection request.
 				client = serverSocket.accept();
-				
-				synchronized (lock) {
-					if (!isMailSent && mailNotfiyService.IsServiceAvailabe()) {
-						isMailSent = true;
-						mailNotfiyService.SendEmail();
-					}
-				}				
+				// sending the mail
+				sendMail();
 				// TODO: thread safe 			
 				// Construct an object to process the HTTP request message.
 				HttpRequest request = new HttpRequest(client, data, threadPool);
