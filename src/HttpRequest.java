@@ -50,7 +50,7 @@ public class HttpRequest implements Runnable {
 	public void run() {
 		try {
 			processRequest();
-		} catch (Exception e) {
+		} catch (Exception e) {			
 			System.out.println("Error: could not send response!");
 		}
 		finally {
@@ -61,7 +61,7 @@ public class HttpRequest implements Runnable {
 	private void processRequest() throws Exception {
 
 		BufferedReader bufferedReader = null;
-		String inputMessage = "";
+		String inputMessage = null;
 		bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 		StringBuilder clientRequest = new StringBuilder();
 		while ((inputMessage = bufferedReader.readLine()) != null && inputMessage.length() > 0) {
@@ -256,10 +256,13 @@ public class HttpRequest implements Runnable {
 
 		DataOutputStream writerToClient = null;
 		try {
+
 			writerToClient = new DataOutputStream(clientSocket.getOutputStream());
 			// printing response header
 			System.out.println(responseMessage);
-
+			System.out.println("Socket Alive: " + clientSocket.isConnected());
+			clientSocket.isConnected();
+			clientSocket.getLocalPort();
 			writerToClient.writeBytes(responseMessage);
 
 			if (pageContent != null) {
@@ -267,7 +270,9 @@ public class HttpRequest implements Runnable {
 				writerToClient.flush();
 			}
 
-		} catch (IOException e) {		
+		} catch (IOException e) {	
+			System.out.println(e.getMessage());
+			e.printStackTrace();
 			System.out.println("Error in writing response to client!");
 			// TODO: if connection is closed while closing
 		} finally {
