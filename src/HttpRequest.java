@@ -73,11 +73,18 @@ public class HttpRequest implements Runnable {
 		// printing the client's header request
 		System.out.println(clientRequest.toString());
 		// TODO: Check validity of header
-		if (clientRequestArray[0].startsWith("GET")) { // GET request
+		String requestType = clientRequestArray[0];
+		if (requestType.startsWith("GET")) { // GET request
 			getHandler(clientRequestArray);
-		} else if (clientRequestArray[0].startsWith("POST")) { // POST
-
-		} else {
+		} else if (requestType.startsWith("POST")) { // POST
+			
+		} else if(requestType.startsWith("HEAD")) {
+			// TODO: check the difarance
+			getHandler(clientRequestArray);
+		} else if(requestType.startsWith("TRACE")) {
+			
+		}
+		else {
 			// TODO: return 501
 			System.out.println("Problem Header: \n**" + clientRequest.toString() + "**");
 			responseHandler(HttpResponseCode.NOT_IMPLEMENTED_501, null, null);
