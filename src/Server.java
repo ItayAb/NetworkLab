@@ -9,7 +9,12 @@ public class Server {
 
 	private ConfigData data;
 	private Semaphore threadPool;
+	private boolean isMailSent = false;
+	MailNotifier mailNotfiyService;
+	static Object lock;
+	
 	public Server() {
+		mailNotfiyService = new MailNotifier();
 		data = new ConfigData();
 		try {
 			data.Load();
@@ -20,7 +25,7 @@ public class Server {
 			System.out.println("Server will shut down...");
 		}
 	}
-
+	
 	public void Begin() {
 		// Establish the listen socket.
 		ServerSocket serverSocket = null;
@@ -33,9 +38,14 @@ public class Server {
 				threadPool.acquire();
 				// Listen for a TCP connection request.
 				client = serverSocket.accept();
-
-				// TODO: thread safe 
 				
+				synchronized (lock) {
+					if (!isMailSent && mailNotfiyService.IsServiceAvailabe()) {
+						isMailSent = true;
+						mailNotfiyService.SendEmail();
+					}
+				}				
+				// TODO: thread safe 			
 				// Construct an object to process the HTTP request message.
 				HttpRequest request = new HttpRequest(client, data, threadPool);
 				
