@@ -3,8 +3,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.Semaphore;
 
-import javax.xml.soap.SAAJMetaFactory;
-
 public class Server {
 
 	private ConfigData data;
@@ -42,7 +40,9 @@ public class Server {
 		ServerSocket serverSocket = null;
 		Socket client = null;
 		try {
-			serverSocket = new ServerSocket(data.getPort());			
+			serverSocket = new ServerSocket(data.getPort());		
+			
+			System.out.println("Listening on port: " + data.getPort());
 			// Process HTTP service requests in an infinite loop.
 			while (true) {				
 				threadPool.acquire();

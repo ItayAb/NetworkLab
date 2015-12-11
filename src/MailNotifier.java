@@ -17,9 +17,12 @@ public class MailNotifier {
 		dataLoader = new MailNotifierDataLoader();
 		try {
 			dataLoader.loadData();
+			if (!dataLoader.IsLoaded()) {
+				System.out.println("Mail Notifier Service is unavailable");
+			}
 		} catch (Exception e) {
 			System.out.println("Error in loading data for Mail Notifier.");
-			System.out.println("Mail Notifier Service is currently unavailable");
+			System.out.println("Mail Notifier Service is unavailable");
 		}
 	}
 	

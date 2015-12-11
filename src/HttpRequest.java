@@ -8,9 +8,6 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.concurrent.Semaphore;
 
-import javax.swing.text.AbstractDocument.LeafElement;
-import javax.xml.crypto.dsig.keyinfo.KeyValue;
-
 public class HttpRequest implements Runnable {
 
 	private final String OK_200 = "200 OK";
@@ -23,15 +20,17 @@ public class HttpRequest implements Runnable {
 
 	private final static String CRLF = "\r\n";// CLRF “\r” == 0x0d ; [LF] ==
 												// “\n” == 0x0a
-
+	private final static String SERVER_NAME = "Snir Itay Server";
 	private Socket clientSocket;
 	private ConfigData data;
 	private Semaphore threadPool;
 	private HashMap<String, String> paramsFormClient;
 	private String requestHeader;
+	private Request requestOfClient;
 
 	// Constructor
 	public HttpRequest(Socket socket, ConfigData data, Semaphore threadPool) {
+		requestOfClient = new Request();
 		clientSocket = socket;
 		this.data = data;
 		this.threadPool = threadPool;
@@ -51,34 +50,48 @@ public class HttpRequest implements Runnable {
 	// Implement the run() method of the Runnable interface.
 	public void run() {
 		try {
-			processRequest();
+			//processRequest();
+			proccessRequestTest();
 		} catch (Exception e) {
 			System.out.println("Error: could not send response!");
 		} finally {
 			threadPool.release();
+			
+			if (!clientSocket.isClosed()) {
+				try {
+					clientSocket.close();
+				} catch (IOException e) {
+					System.out.println("Error while closing connection");
+				}
+			}
 		}
 	}
 
+	private void proccessRequestTest() throws IOException{
+		requestOfClient.ParseRequest(clientSocket);
+		System.out.println("Header: \n" + requestOfClient.Header.toString());
+		System.out.println("Body: \n" + requestOfClient.Body.toString());
+		getHandler(requestOfClient.Header.toString().split("\n"), requestOfClient.requestType);
+		
+	}
+	// TODO: implement Chunks	
 	private void processRequest() throws Exception {
-
 		BufferedReader bufferedReader = null;
 		String inputMessage = "";
 		bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 		StringBuilder clientRequest = new StringBuilder();
 		while ((inputMessage = bufferedReader.readLine()) != null && inputMessage.length() > 0) {
 			// TODO: check about readline
-			clientRequest.append(inputMessage + CRLF); //TODO: see if /n or CRLF
+			clientRequest.append(inputMessage + "\n"); //TODO: see if /n or CRLF
 		}
-		int endOfHeader = clientRequest.lastIndexOf(CRLF);
-		String header = clientRequest.toString().substring(0, endOfHeader);
-		String body = clientRequest.toString().substring(endOfHeader).trim();
-		System.out.println("header is:/n" + header);
-		System.out.println("body is:/n" + body);
 		String[] clientRequestArray = clientRequest.toString().split(CRLF);
+		
 		// printing the client's header request
-		System.out.println(clientRequest.toString());
+		System.out.println("Header is: \n" + clientRequest.toString());
 		// TODO: Check validity of header
+		
 		String requestType = clientRequestArray[0];
+		
 		if (requestType.startsWith(RequestType.GET.toString())) {
 			getHandler(clientRequestArray, RequestType.GET);
 		} else if (requestType.startsWith(RequestType.POST.toString())) {
@@ -137,8 +150,7 @@ public class HttpRequest implements Runnable {
 		}
 	}
 
-	private String extractPageFromRequest(String header) {
-		System.out.println("Before: " + header);
+	private String extractPageFromRequest(String header) {		
 		String pageToReturn = null;
 		String substringHeader = header.substring(header.indexOf('/') + 1, header.indexOf("HTTP"));
 		int indexOfQuestion = substringHeader.indexOf('?');
@@ -148,12 +160,12 @@ public class HttpRequest implements Runnable {
 			pageToReturn = substringHeader;
 		}
 
-		if (pageToReturn.contains("../")) {
+		if (pageToReturn.contains("../")) { // TODO: check if there are several occurrences
 			int indexOfForbidden = pageToReturn.indexOf("../");
 			pageToReturn = pageToReturn.substring(0, indexOfForbidden - 1)
 					+ pageToReturn.substring(indexOfForbidden + 2);
 		}
-		System.out.println("Page to return: " + pageToReturn);
+		
 		return pageToReturn;
 	}
 
@@ -176,8 +188,11 @@ public class HttpRequest implements Runnable {
 			RequestType type) {
 		// TODO : content-type: application/octet-stream
 		StringBuilder httpResponse = new StringBuilder();
-		byte[] pageContent = null;
-
+		byte[] pageContent = null;	
+		if (requestedPage.getAbsoluteFile().equals("C:\\serverroot\\params_info.html")) {
+			pageContent = requestOfClient.initRequestedPage().getBytes();
+		}
+		// TODO: get time Stamp!
 		switch (typeOfResponse) {
 		case OK_200:
 			if (type == RequestType.TRACE) {
@@ -186,7 +201,9 @@ public class HttpRequest implements Runnable {
 			else if (type != RequestType.HEAD) {
 				pageContent = getFileContent(requestedPage);
 			}// TODO: server:?, host:?
-			httpResponse.append("HTTP/1.0 200 OK" + CRLF);
+			httpResponse.append("HTTP/1.0 " + OK_200 + CRLF);
+			httpResponse.append("Date: "  + CRLF);
+			httpResponse.append("Server: " + SERVER_NAME + CRLF);
 			httpResponse.append(contentType.get(extension) + CRLF);
 			httpResponse.append("Content-Length: " + pageContent.length + CRLF);
 			httpResponse.append(CRLF);
@@ -194,13 +211,17 @@ public class HttpRequest implements Runnable {
 		case NOT_FOUND_404:
 			pageContent = createHtmlFormat(NOT_FOUND_404);
 			httpResponse.append("HTTP/1.0 " + NOT_FOUND_404 + CRLF);
+			httpResponse.append("Date: "   + CRLF);
+			httpResponse.append("Server: " + SERVER_NAME + CRLF);
 			httpResponse.append("Content-Type: text/html" + CRLF);
 			httpResponse.append("Content-Length: " + pageContent.length + CRLF);
 			httpResponse.append(CRLF);
 			break;
 		case NOT_IMPLEMENTED_501:
-			pageContent = createHtmlFormat(NOT_IMPLEMENTED_501);
+			pageContent = createHtmlFormat(NOT_IMPLEMENTED_501);			
 			httpResponse.append("HTTP/1.0 " + NOT_IMPLEMENTED_501 + CRLF);
+			httpResponse.append("Date: "   + CRLF);
+			httpResponse.append("Server: " + SERVER_NAME  + CRLF);
 			httpResponse.append("Content-Type: text/html" + CRLF);
 			httpResponse.append("Content-Length: " + pageContent.length + CRLF);
 			httpResponse.append(CRLF);
@@ -208,6 +229,8 @@ public class HttpRequest implements Runnable {
 		case BAD_REQUEST_400:
 			pageContent = createHtmlFormat(BAD_REQUEST_400);
 			httpResponse.append("HTTP/1.0 " + BAD_REQUEST_400 + CRLF);
+			httpResponse.append("Date: "   + CRLF);
+			httpResponse.append("Server: " + SERVER_NAME + CRLF);
 			httpResponse.append("Content-Type: text/html" + CRLF);
 			httpResponse.append("Content-Length: " + pageContent.length + CRLF);
 			httpResponse.append(CRLF);
@@ -267,10 +290,8 @@ public class HttpRequest implements Runnable {
 
 			writerToClient = new DataOutputStream(clientSocket.getOutputStream());
 			// printing response header
-			System.out.println(responseMessage);
-			System.out.println("Socket Alive: " + clientSocket.isConnected());
-			clientSocket.isConnected();
-			clientSocket.getLocalPort();
+			System.out.println("Response Header:\n" + responseMessage);
+		
 			writerToClient.writeBytes(responseMessage);
 
 			if (pageContent != null) {
