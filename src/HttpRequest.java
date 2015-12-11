@@ -8,6 +8,7 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.concurrent.Semaphore;
 
+import javax.swing.text.AbstractDocument.LeafElement;
 import javax.xml.crypto.dsig.keyinfo.KeyValue;
 
 public class HttpRequest implements Runnable {
@@ -27,6 +28,7 @@ public class HttpRequest implements Runnable {
 	private ConfigData data;
 	private Semaphore threadPool;
 	private HashMap<String, String> paramsFormClient;
+	private String requestHeader;
 
 	// Constructor
 	public HttpRequest(Socket socket, ConfigData data, Semaphore threadPool) {
@@ -50,10 +52,9 @@ public class HttpRequest implements Runnable {
 	public void run() {
 		try {
 			processRequest();
-		} catch (Exception e) {			
+		} catch (Exception e) {
 			System.out.println("Error: could not send response!");
-		}
-		finally {
+		} finally {
 			threadPool.release();
 		}
 	}
@@ -61,65 +62,65 @@ public class HttpRequest implements Runnable {
 	private void processRequest() throws Exception {
 
 		BufferedReader bufferedReader = null;
-		String inputMessage = null;
+		String inputMessage = "";
 		bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 		StringBuilder clientRequest = new StringBuilder();
 		while ((inputMessage = bufferedReader.readLine()) != null && inputMessage.length() > 0) {
 			// TODO: check about readline
-			clientRequest.append(inputMessage + CRLF);
+			clientRequest.append(inputMessage + CRLF); //TODO: see if /n or CRLF
 		}
-
+		int endOfHeader = clientRequest.lastIndexOf(CRLF);
+		String header = clientRequest.toString().substring(0, endOfHeader);
+		String body = clientRequest.toString().substring(endOfHeader).trim();
+		System.out.println("header is:/n" + header);
+		System.out.println("body is:/n" + body);
 		String[] clientRequestArray = clientRequest.toString().split(CRLF);
 		// printing the client's header request
 		System.out.println(clientRequest.toString());
 		// TODO: Check validity of header
 		String requestType = clientRequestArray[0];
-		if (requestType.startsWith("GET")) { // GET request
-			getHandler(clientRequestArray);
-		} else if (requestType.startsWith("POST")) { // POST
-			
-		} else if(requestType.startsWith("HEAD")) {
-			// TODO: check the difarance
-			getHandler(clientRequestArray);
-		} else if(requestType.startsWith("TRACE")) {
-			
-		}
-		else {
+		if (requestType.startsWith(RequestType.GET.toString())) {
+			getHandler(clientRequestArray, RequestType.GET);
+		} else if (requestType.startsWith(RequestType.POST.toString())) {
+			getHandler(clientRequestArray, RequestType.POST);
+		} else if (requestType.startsWith(RequestType.HEAD.toString())) {
+			getHandler(clientRequestArray, RequestType.HEAD);
+		} else if (requestType.startsWith(RequestType.TRACE.toString())) {
+			getHandler(clientRequestArray, RequestType.TRACE);
+		} else {
 			// TODO: return 501
 			System.out.println("Problem Header: \n**" + clientRequest.toString() + "**");
-			responseHandler(HttpResponseCode.NOT_IMPLEMENTED_501, null, null);
+			responseHandler(HttpResponseCode.NOT_IMPLEMENTED_501, null, null, null);
 		}
 
 		clientSocket.close();
 	}
 
-	private void getHandler(String[] clientRequestArray) {
+	private void getHandler(String[] clientRequestArray, RequestType type) {
 		File requestedPageFile;
 		requestedPageFile = new File(data.getRoot() + File.separator + extractPageFromRequest(clientRequestArray[0]));
 		updateGetParamaters(clientRequestArray[0]);
 		if (requestedPageFile.exists()) {
 			String extension = getExtension(requestedPageFile);
-			
-			if(contentType.containsKey(extension)) {
-			// 200_OK
-			responseHandler(HttpResponseCode.OK_200, requestedPageFile, extension);
-			}
-			else {
-				//TODO : not supported
-				responseHandler(HttpResponseCode.BAD_REQUEST_400, null, null);
+
+			if (contentType.containsKey(extension)) {
+				// 200_OK
+				responseHandler(HttpResponseCode.OK_200, requestedPageFile, extension, type);
+			} else {
+				// TODO : not supported
+				responseHandler(HttpResponseCode.BAD_REQUEST_400, null, null, type);
 			}
 		}
-
 		else {
 			// TODO: return 404
-			responseHandler(HttpResponseCode.NOT_FOUND_404, null, null);
+			responseHandler(HttpResponseCode.NOT_FOUND_404, null, null, type);
 		}
 	}
-	
+
 	private void updateGetParamaters(String request) {
 		int startParamaters = request.indexOf('?') + 1;
 		int lastParamaters = request.indexOf(" ", startParamaters - 1);
-		if(startParamaters != -1) {
+		if (startParamaters != -1) {
 			if (lastParamaters != -1) {
 				String paramaters = request.substring(startParamaters, lastParamaters).trim();
 				String[] paramatersArray = paramaters.split("&");
@@ -127,15 +128,15 @@ public class HttpRequest implements Runnable {
 					String[] split = paramatersArray[i].split("=");
 					if (split.length == 2) {
 						paramsFormClient.put(split[0], split[1]);
-					}
-					else if (split.length == 1) { //TODO: if there is a case of "x= "
+					} else if (split.length == 1) { // TODO: if there is a case
+													// of "x= "
 						paramsFormClient.put(split[0], "");
 					}
 				}
 			}
-		}		
+		}
 	}
-	
+
 	private String extractPageFromRequest(String header) {
 		System.out.println("Before: " + header);
 		String pageToReturn = null;
@@ -149,35 +150,42 @@ public class HttpRequest implements Runnable {
 
 		if (pageToReturn.contains("../")) {
 			int indexOfForbidden = pageToReturn.indexOf("../");
-			pageToReturn = pageToReturn.substring(0, indexOfForbidden - 1) + pageToReturn.substring(indexOfForbidden + 2); 
+			pageToReturn = pageToReturn.substring(0, indexOfForbidden - 1)
+					+ pageToReturn.substring(indexOfForbidden + 2);
 		}
 		System.out.println("Page to return: " + pageToReturn);
 		return pageToReturn;
 	}
 
 	private String getExtension(File requestedPage) {
-		
+
 		String path = requestedPage.getPath();
 		String extension = "";
-		
+
 		int indexLastPoint = path.lastIndexOf('.') + 1;
-		
+
 		if (indexLastPoint != -1 && path.length() > indexLastPoint) {
 			extension = path.substring(indexLastPoint);
 		}
-		
+
 		return extension.toLowerCase().trim();
-		
+
 	}
 
-	private void responseHandler(HttpResponseCode typeOfResponse, File requestedPage, String extension) {
-		//TODO : content-type: application/octet-stream 
+	private void responseHandler(HttpResponseCode typeOfResponse, File requestedPage, String extension,
+			RequestType type) {
+		// TODO : content-type: application/octet-stream
 		StringBuilder httpResponse = new StringBuilder();
 		byte[] pageContent = null;
 
 		switch (typeOfResponse) {
 		case OK_200:
-			pageContent = getFileContent(requestedPage);
+			if (type == RequestType.TRACE) {
+				pageContent = requestHeader.getBytes();
+			}
+			else if (type != RequestType.HEAD) {
+				pageContent = getFileContent(requestedPage);
+			}// TODO: server:?, host:?
 			httpResponse.append("HTTP/1.0 200 OK" + CRLF);
 			httpResponse.append(contentType.get(extension) + CRLF);
 			httpResponse.append("Content-Length: " + pageContent.length + CRLF);
@@ -270,7 +278,7 @@ public class HttpRequest implements Runnable {
 				writerToClient.flush();
 			}
 
-		} catch (IOException e) {	
+		} catch (IOException e) {
 			System.out.println(e.getMessage());
 			e.printStackTrace();
 			System.out.println("Error in writing response to client!");
