@@ -74,7 +74,6 @@ public class Server {
 					client.close();
 				}
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				System.out.println("Error while shutting down, could not close all resources");
 			}
 		}

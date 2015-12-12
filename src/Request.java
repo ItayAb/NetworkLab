@@ -13,7 +13,9 @@ import javax.swing.text.StyledEditorKit.BoldAction;
 public class Request {
 
 	private final String CHUNKED = "chunked: yes";
+	private final String PARAMS_PAGE_NAME = "params_info.html";
 	private final String CONTENT_LENGTH = "Content-Length:";
+	private String defaultPageName = "index.html";
 	public HttpResponseCode responseCode;
 	public RequestType requestType;
 	public StringBuilder Header;
@@ -22,10 +24,12 @@ public class Request {
 	public String requestedPage;
 	private HashMap<String, String> paramsFromClient;
 	private int contentLength;
+	private ConfigData serverData;
 	
 	
 	
-	public Request() {
+	public Request(ConfigData data) {
+		serverData = data;
 		isChunked = false;
 		responseCode = null;
 		requestType = null;
@@ -41,16 +45,17 @@ public class Request {
 		bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 		boolean isFirstLine = true;
 		
-		// reading Body
+		// reading Header
 		while ((inputMessage = bufferedReader.readLine()) != null) {
-			// TODO: check about readline
 			if (isFirstLine) {
-				if (isValidHeader(inputMessage)) {
+				if (!isValidHeader(inputMessage)) {
 					responseCode = HttpResponseCode.BAD_REQUEST_400;
+				}else {
+					extractRequestType(inputMessage);
+					extractUrlVariables(inputMessage);
+					extractRequestedPage(inputMessage);
 				}
-				extractRequestType(inputMessage);
-				extractUrlVariables(inputMessage);
-				extractRequestedPage(inputMessage);
+				
 				isFirstLine = false;
 			}
 			
@@ -80,25 +85,58 @@ public class Request {
 			}
 		}
 		
-		if (requestType.equals(RequestType.POST)) {
+		if (requestType.equals(RequestType.POST)) { //TODO: are there more requestTypes the have params in body?
 			parseParamsFromBody();
+		}
+		
+		if (requestedPage.equals(PARAMS_PAGE_NAME)) {
+			initRequestedPage();
+		}
+		if (responseCode == null) {
+			extractResponseCode();
+		}
+	}
+	
+	private void extractResponseCode(){
+		File requestedPageFile = new File(serverData.getRoot() + File.separator + requestedPage);
+		if (requestedPageFile.exists()) {
+			responseCode = HttpResponseCode.OK_200;
+		}
+		else {
+			responseCode = HttpResponseCode.NOT_FOUND_404;
 		}
 	}
 
 	private void parseParamsFromBody(){
+		String[] body = Body.toString().split("&");
 		
+		for (int i = 0; i < body.length; i++) {
+			String[] keyToVal = body[i].split("=");
+			if (keyToVal.length == 1) {
+				paramsFromClient.put(keyToVal[0], "");
+			}
+			if (keyToVal.length == 2) {
+				paramsFromClient.put(keyToVal[0], keyToVal[1]);
+			}
+		}
 		
 		
 	}
 	
 	private boolean isValidHeader(String inputMessage) {
-		int indexOfFirstWhitespace = inputMessage.indexOf(" ");
-		int indexOfSecondWhitespace = inputMessage.substring(indexOfFirstWhitespace + 1).indexOf(" ");
-		boolean isContainHttp = inputMessage.endsWith("/HTTP/1.0") || inputMessage.endsWith("/HTTP/1.1");
+		boolean isValid = false;
+		String[] headerDivided = inputMessage.split(" ");
+		if (headerDivided.length > 2) {
+			if (headerDivided[0].length() > 0) {
+				if (headerDivided[1].startsWith("/")) {
+					if (headerDivided[2].startsWith("HTTP/1.0") || headerDivided[2].startsWith("HTTP/1.1")) {
+						isValid = true;
+					}
+				}
+			}
+		}
 		
-		boolean isExistTwoWhitespace = (indexOfFirstWhitespace != 1 && indexOfSecondWhitespace != -1) ? true : false;
-		
-		return (isContainHttp && isExistTwoWhitespace);
+		return isValid;
 	}
 	
 
@@ -111,29 +149,29 @@ public class Request {
 		} else {
 			pageToReturn = substringHeader;
 		}
-
-		if (pageToReturn.contains("../")) { // TODO: check if there are several occurrences
-			int indexOfForbidden = pageToReturn.indexOf("../");
-			pageToReturn = pageToReturn.substring(0, indexOfForbidden - 1)
-					+ pageToReturn.substring(indexOfForbidden + 2);
+		
+		if (pageToReturn.trim().length() == 0) { //if no page was asked then default
+			pageToReturn = defaultPageName;
 		}
 		
-		requestedPage = pageToReturn;	
+		pageToReturn = pageToReturn.replaceAll("../", "");
+		
+		requestedPage = pageToReturn.trim();	
 	}
 
 	private void extractUrlVariables(String inputMessage) {
-		int startParamaters = inputMessage.indexOf('?') + 1;
-		int lastParamaters = inputMessage.indexOf(" ", startParamaters - 1);
-		if (startParamaters != -1) {
-			if (lastParamaters != -1) {
-				String paramaters = inputMessage.substring(startParamaters, lastParamaters).trim();
+		int indexOfQuestionMark = inputMessage.indexOf('?');
+		int indexOfLastWhitespace = inputMessage.trim().lastIndexOf(" ");
+		if (indexOfQuestionMark != -1) {
+			if (indexOfLastWhitespace != -1) {
+				String paramaters = inputMessage.substring(indexOfQuestionMark + 1, indexOfLastWhitespace).trim();
 				String[] paramatersArray = paramaters.split("&");
 				for (int i = 0; i < paramatersArray.length; i++) {
 					String[] split = paramatersArray[i].split("=");
 					if (split.length == 2) {
 						paramsFromClient.put(split[0], split[1]);
-					} else if (split.length == 1) { // TODO: if there is a case
-													// of "x= "
+					} else if (split.length == 1) { // TODO: if there is a case of "x= "
+													
 						paramsFromClient.put(split[0], "");
 					}
 				}
@@ -153,53 +191,46 @@ public class Request {
 				requestType = runnerRequestType;
 				break;
 			}
-			
-			if (requestType == null) {
-				responseCode = HttpResponseCode.NOT_IMPLEMENTED_501;
-			}
-		}
-	}
-	
-	public boolean isValidHeader(){
-		boolean isValid = false;
-		if (requestType != null) {
-			if (isValid) {
-				
-			}
 		}
 		
-		return isValid;
+		if (requestType == null) {
+			responseCode = HttpResponseCode.NOT_IMPLEMENTED_501;
+		}
 	}
 	
-	public String initRequestedPage(){
+	
+	private void initRequestedPage() throws IOException{
 		StringBuilder htmlTable = new StringBuilder();
-		StringBuilder correspondingValuesToKeys = new StringBuilder();
-		htmlTable.append("<html>");
-		htmlTable.append("<body>");
-		htmlTable.append("<table style=\"width:100%\">");
-		htmlTable.append("<tr>");
-		for (String variableName : paramsFromClient.keySet()) {
-			htmlTable.append("<td>" + variableName + "</td>");
-			correspondingValuesToKeys.append(paramsFromClient.get(variableName) + "\n");
-		}
-		htmlTable.append("</tr>");
-		htmlTable.append("<tr>");
-		String[] correspondingAsArray = correspondingValuesToKeys.toString().split("\n");
-		for (int i = 0; i < correspondingAsArray.length; i++) {
-			htmlTable.append("<td>" + correspondingAsArray[i] + "</td>");
-		}
-		htmlTable.append("</tr>");
-		htmlTable.append("</table>");
-		htmlTable.append("</body");
-		htmlTable.append("</html>");
 		
-		return htmlTable.toString();
+		htmlTable.append("<html>\n");
+		htmlTable.append("<body>\n");
+		htmlTable.append("<table style=\"width:10%\">\n");
+		for (String variableName : paramsFromClient.keySet()) {
+			htmlTable.append("<tr>\n");
+			htmlTable.append("<td>" + variableName + "</td>\n");
+			htmlTable.append("<td>" + paramsFromClient.get(variableName) + "</td>\n");
+			htmlTable.append("</tr>\n");
+		}
+		htmlTable.append("</table>\n");
+		htmlTable.append("</body\n");
+		htmlTable.append("</html>\n");
+		
+		writeHtmlOfParams(htmlTable.toString());
 	}
 	
-	private void writeHtmlOfParams(String htmlPageContent, File paramsPage) throws IOException{
-		FileWriter writer = new FileWriter(paramsPage);
+	private void writeHtmlOfParams(String htmlPageContent) throws IOException{
+		File requestedPageFile = new File(serverData.getRoot() + File.separator + requestedPage);
+		FileWriter writer = null;
+		try {
+			writer = new FileWriter(requestedPageFile);
+			writer.write(htmlPageContent);
+		} finally{
+			
+			if (writer != null) {
+				writer.close();
+			}
+		}
 		
-		writer.write(htmlPageContent);
 		
 	}
 }
