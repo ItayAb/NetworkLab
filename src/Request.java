@@ -35,7 +35,7 @@ public class Request {
 		requestType = null;
 		Header = new StringBuilder();
 		Body = new StringBuilder();
-		contentLength = 0;
+		contentLength = -1;
 		paramsFromClient = new HashMap<>();
 	}
 	
@@ -74,6 +74,7 @@ public class Request {
 			Header.append(inputMessage + "\n");	
 		}
 		
+		
 		// reading Body
 		if (contentLength > 0) {
 			int readInt;
@@ -83,6 +84,11 @@ public class Request {
 					break;
 				}
 			}
+		}
+		
+		// TODO: check cases of bad request
+		if (requestType == RequestType.POST && contentLength == -1) {
+			responseCode = HttpResponseCode.BAD_REQUEST_400;
 		}
 		
 		if (requestType.equals(RequestType.POST)) { //TODO: are there more requestTypes the have params in body?
