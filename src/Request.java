@@ -62,6 +62,10 @@ public class Request {
 
 			if (inputMessage.startsWith(CONTENT_LENGTH)) {
 				extractContentLength(inputMessage);
+				if (responseCode == HttpResponseCode.BAD_REQUEST_400) {
+					isValidHeader = false;
+					break;
+				}
 			}
 
 			if (inputMessage.equals("")) { // end of header
@@ -192,9 +196,15 @@ public class Request {
 	}
 
 	private void extractContentLength(String lineOfInput) {
-		int indexOfColon = lineOfInput.indexOf(":") + 1;
-		String length = lineOfInput.substring(indexOfColon).trim();
-		contentLength = Integer.parseInt(length);
+		try{
+			int indexOfColon = lineOfInput.indexOf(":") + 1;
+			String length = lineOfInput.substring(indexOfColon).trim();
+			contentLength = Integer.parseInt(length);
+		}
+		catch (Exception e){
+			System.out.println("Error, corrupt content-length in header");
+			responseCode = HttpResponseCode.BAD_REQUEST_400;
+		}
 	}
 
 	private void extractRequestType(String firstInputLine) {
