@@ -9,7 +9,7 @@ public class Server {
 	private Semaphore threadPool;
 	private boolean isMailSent = false;
 	MailNotifier mailNotfiyService;
-	static Object lock;
+	private static Object lock = new Object();
 	
 	public Server() {
 		mailNotfiyService = new MailNotifier();
@@ -26,7 +26,7 @@ public class Server {
 	
 	private void sendMail(){		
 		if (!isMailSent && mailNotfiyService.IsServiceAvailabe()) {
-			synchronized (lock) { // TODO: check if lock is a good way to multi thread
+			synchronized (lock) {
 				if (!isMailSent && mailNotfiyService.IsServiceAvailabe()) {
 					isMailSent = true;
 					mailNotfiyService.SendEmail();
@@ -50,7 +50,7 @@ public class Server {
 				client = serverSocket.accept();
 				// sending the mail
 				sendMail();
-				// TODO: thread safe 			
+					
 				// Construct an object to process the HTTP request message.
 				HttpRequest request = new HttpRequest(client, data, threadPool);
 				

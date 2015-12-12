@@ -1,9 +1,7 @@
-import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
@@ -20,24 +18,18 @@ public class HttpRequest implements Runnable {
 
 	private HashMap<String, String> contentType = new HashMap<>();
 
-	private final static String CRLF = "\r\n";// CLRF “\r” == 0x0d ; [LF] ==
-												// “\n” == 0x0a
+	private final static String CRLF = "\r\n";// CLRF “\r” == 0x0d ; [LF] == “\n” == 0x0a										
 	private final static String SERVER_NAME = "Snir Itay Server";
 	private Socket clientSocket;
-	private ConfigData data;
 	private Semaphore threadPool;
-	private HashMap<String, String> paramsFormClient;
-	private String requestHeader;
 	private Request requestOfClient;
 
 	// Constructor
 	public HttpRequest(Socket socket, ConfigData data, Semaphore threadPool) {
 		requestOfClient = new Request(data);
 		clientSocket = socket;
-		this.data = data;
 		this.threadPool = threadPool;
 		initDictionary();
-		paramsFormClient = new HashMap<>();
 	}
 
 	private void initDictionary() {
@@ -52,8 +44,7 @@ public class HttpRequest implements Runnable {
 	// Implement the run() method of the Runnable interface.
 	public void run() {
 		try {
-			// processRequest();
-			proccessRequestTest();
+			proccessRequest();
 		} catch (Exception e) {
 			System.out.println("Error: could not send response!");
 		} finally {
@@ -69,125 +60,14 @@ public class HttpRequest implements Runnable {
 		}
 	}
 
-	private void proccessRequestTest() throws IOException {
+	private void proccessRequest() throws IOException {
 		requestOfClient.ParseRequest(clientSocket);
 		System.out.println("Header: \n" + requestOfClient.Header.toString());
 		System.out.println("Body: \n" + requestOfClient.Body.toString());
-		File requestedPageFile = new File(data.getRoot() + File.separator + requestOfClient.requestedPage);
-		//getHandler(requestOfClient.Header.toString().split("\n"), requestOfClient.requestType);
-		responseHandler(requestOfClient.responseCode, requestedPageFile, getExtension(requestOfClient.requestedPage), requestOfClient.requestType);
-		
+		responseHandler();
+	
 	}
-		
-
 	// TODO: implement Chunks
-	private void processRequest() throws Exception {
-		BufferedReader bufferedReader = null;
-		String inputMessage = "";
-		bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-		StringBuilder clientRequest = new StringBuilder();
-		while ((inputMessage = bufferedReader.readLine()) != null && inputMessage.length() > 0) {
-			// TODO: check about readline
-			clientRequest.append(inputMessage + "\n"); // TODO: see if /n or
-														// CRLF
-		}
-		String[] clientRequestArray = clientRequest.toString().split(CRLF);
-
-		// printing the client's header request
-		System.out.println("Header is: \n" + clientRequest.toString());
-		// TODO: Check validity of header
-
-		String requestType = clientRequestArray[0];
-
-		if (requestType.startsWith(RequestType.GET.toString())) {
-			getHandler(clientRequestArray, RequestType.GET);
-		} else if (requestType.startsWith(RequestType.POST.toString())) {
-			getHandler(clientRequestArray, RequestType.POST);
-		} else if (requestType.startsWith(RequestType.HEAD.toString())) {
-			getHandler(clientRequestArray, RequestType.HEAD);
-		} else if (requestType.startsWith(RequestType.TRACE.toString())) {
-			getHandler(clientRequestArray, RequestType.TRACE);
-		} else {
-			// TODO: return 501
-			System.out.println("Problem Header: \n**" + clientRequest.toString() + "**");
-			responseHandler(HttpResponseCode.NOT_IMPLEMENTED_501, null, null, null);
-		}
-
-		clientSocket.close();
-	}
-
-	private void getHandler(String[] clientRequestArray, RequestType type) {
-		File requestedPageFile;
-		requestedPageFile = new File(data.getRoot() + File.separator + requestOfClient.requestedPage);
-		updateGetParamaters(clientRequestArray[0]);
-		if (requestedPageFile.exists()) {
-			String extension = getExtension(requestedPageFile);
-
-			if (contentType.containsKey(extension)) {
-				// 200_OK
-				responseHandler(HttpResponseCode.OK_200, requestedPageFile, extension, type);
-			} else {
-				// TODO : not supported
-				responseHandler(HttpResponseCode.BAD_REQUEST_400, null, null, type);
-			}
-		} else {
-			// in case file was not found, return 404
-			responseHandler(HttpResponseCode.NOT_FOUND_404, null, null, type);
-		}
-	}
-
-	private void updateGetParamaters(String request) {
-		int startParamaters = request.indexOf('?') + 1;
-		int lastParamaters = request.indexOf(" ", startParamaters - 1);
-		if (startParamaters != -1) {
-			if (lastParamaters != -1) {
-				String paramaters = request.substring(startParamaters, lastParamaters).trim();
-				String[] paramatersArray = paramaters.split("&");
-				for (int i = 0; i < paramatersArray.length; i++) {
-					String[] split = paramatersArray[i].split("=");
-					if (split.length == 2) {
-						paramsFormClient.put(split[0], split[1]);
-					} else if (split.length == 1) { // TODO: if there is a case
-													// of "x= "
-						paramsFormClient.put(split[0], "");
-					}
-				}
-			}
-		}
-	}
-
-	private String extractPageFromRequest(String header) {
-		String pageToReturn = null;
-		String substringHeader = header.substring(header.indexOf('/') + 1, header.indexOf("HTTP"));
-		int indexOfQuestion = substringHeader.indexOf('?');
-		if (indexOfQuestion != -1) {
-			pageToReturn = substringHeader.substring(0, indexOfQuestion);
-		} else {
-			pageToReturn = substringHeader;
-		}
-
-		if (pageToReturn.contains("../")) { // TODO: check if there are several
-											// occurrences
-			int indexOfForbidden = pageToReturn.indexOf("../");
-			pageToReturn = pageToReturn.substring(0, indexOfForbidden - 1) + pageToReturn.substring(indexOfForbidden + 2);
-		}
-
-		return pageToReturn;
-	}
-
-	private String getExtension(File requestedPage) {
-
-		String path = requestedPage.getPath();
-		String extension = "";
-
-		int indexLastPoint = path.lastIndexOf('.') + 1;
-
-		if (indexLastPoint != -1 && path.length() > indexLastPoint) {
-			extension = path.substring(indexLastPoint).toLowerCase().trim();
-		}
-
-		return extension;
-	}
 	
 	private String getExtension(String fileName) {
 		String extension = "";
@@ -201,22 +81,22 @@ public class HttpRequest implements Runnable {
 		return extension;
 	}
 
-	private void responseHandler(HttpResponseCode typeOfResponse, File requestedPage, String extension, RequestType type) {
+	private void responseHandler() {
 		// TODO : content-type: application/octet-stream
 		StringBuilder httpResponse = new StringBuilder();
 		byte[] pageContent = null;
 		String date = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss zzzz", Locale.US).format(System.currentTimeMillis());
-		switch (typeOfResponse) {
+		switch (requestOfClient.responseCode) {
 		case OK_200:
-			if (type == RequestType.TRACE) {
-				pageContent = requestHeader.getBytes();
-			} else if (type != RequestType.HEAD) {
-				pageContent = getFileContent(requestedPage);
+			if (requestOfClient.requestType == RequestType.TRACE) {
+				pageContent = requestOfClient.Header.toString().getBytes();
+			} else if (requestOfClient.requestType != RequestType.HEAD) {
+				pageContent = getFileContent(requestOfClient.requestedFile);
 			}
 			httpResponse.append("HTTP/1.0 " + OK_200 + CRLF);
 			httpResponse.append("Date: " + date + CRLF);
 			httpResponse.append("Server: " + SERVER_NAME + CRLF);
-			httpResponse.append(contentType.get(extension) + CRLF);
+			httpResponse.append(contentType.get(getExtension(requestOfClient.requestedPage)) + CRLF);
 			if (requestOfClient.isChunked) {
 				httpResponse.append("transfer-encoding: chunked");
 			}
@@ -316,9 +196,7 @@ public class HttpRequest implements Runnable {
 
 		} catch (IOException e) {
 			System.out.println(e.getMessage());
-			e.printStackTrace();
 			System.out.println("Error in writing response to client!");
-			// TODO: if connection is closed while closing
 		} finally {
 			try {
 				if (writerToClient != null) {

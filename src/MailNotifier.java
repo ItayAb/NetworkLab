@@ -12,6 +12,10 @@ import javax.mail.internet.MimeMessage;
 public class MailNotifier {
 
 	private MailNotifierDataLoader dataLoader;
+	private final String FROM = "LabNetworksWebServer@gmail.com";
+	private final String PASSWORD = "Networks2015";
+	private final String SUBJECT = "Activity in server"; 
+	private final String BODY_MESSAGE = "There has been a connection to the server";
 	
 	public MailNotifier() {
 		dataLoader = new MailNotifierDataLoader();
@@ -35,28 +39,26 @@ public class MailNotifier {
 		
 		if (dataLoader.IsLoaded()) {
 			String to = dataLoader.Recipient();
-			final String from = "";
-			final String password = "XXX";
 			Properties props = new Properties();
 			props.put("mail.smtp.starttls.enable", "true"); 
 			props.put("mail.smtp.host", "smtp.gmail.com");
-			props.put("mail.smtp.user", from); // User name
-			props.put("mail.smtp.password", password); // password
+			props.put("mail.smtp.user", FROM); // User name
+			props.put("mail.smtp.password", PASSWORD); // password
 			props.put("mail.smtp.port", "587");
 			props.put("mail.smtp.auth", "true");
 			
 			Session session = Session.getDefaultInstance(props, new javax.mail.Authenticator(){
 		        protected PasswordAuthentication getPasswordAuthentication() {
 		            return new PasswordAuthentication(
-		                from, password);}});
+		                FROM, PASSWORD);}});
 
-			String msgBody = "Sending email using JavaMail API...";
+			String msgBody = BODY_MESSAGE;
 
 			try {
 				Message msg = new MimeMessage(session);
-				msg.setFrom(new InternetAddress(from, "NoReply"));
-				msg.addRecipient(Message.RecipientType.TO, new InternetAddress(to, "Mr. Recipient"));
-				msg.setSubject("Welcome To Java Mail API");
+				msg.setFrom(new InternetAddress(FROM, "NoReply"));
+				msg.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
+				msg.setSubject(SUBJECT);
 				msg.setText(msgBody);
 				Transport.send(msg);
 				System.out.println("Email sent successfully...");
