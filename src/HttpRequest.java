@@ -80,6 +80,20 @@ public class HttpRequest implements Runnable {
 
 		return extension;
 	}
+	
+	// TODO: see if this method is what Tsvi meant
+	private String getContentTypeInHeader(String requestPage){
+		String contentTypeHeader = null;
+		String extension = getExtension(requestPage);
+		if (contentType.containsKey(extension)) {
+			contentTypeHeader = contentType.get(extension);
+		}
+		else {
+			contentTypeHeader = "content-type: application/octet-stream";
+		}
+		
+		return contentTypeHeader;
+	}
 
 	private void responseHandler() {
 		// TODO : content-type: application/octet-stream
@@ -98,7 +112,7 @@ public class HttpRequest implements Runnable {
 			httpResponse.append("HTTP/1.0 " + OK_200 + CRLF);
 			httpResponse.append("Date: " + date + CRLF);
 			httpResponse.append("Server: " + SERVER_NAME + CRLF);
-			httpResponse.append(contentType.get(getExtension(requestOfClient.requestedPage)) + CRLF);
+			httpResponse.append(getContentTypeInHeader(requestOfClient.requestedPage) + CRLF);
 			if (requestOfClient.isChunked) {
 				httpResponse.append("transfer-encoding: chunked");
 			}
