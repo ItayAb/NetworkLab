@@ -36,9 +36,8 @@ public class Request {
 	}
 
 	public void ParseRequest(Socket clientSocket) throws IOException {
-		BufferedReader bufferedReader = null;
 		String inputMessage = "";
-		bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 		boolean isFirstLine = true;
 		boolean isValidHeader = false;
 		// reading Header

@@ -14,6 +14,7 @@ public class ConfigData {
 	private final String ROOT = "root";
 	private final String DEFAULT_PAGE = "defaultPage";
 	private final String MAX_THREADS = "maxThreads";
+	private final int DEFAUL_NUM_OF_THREADS = 1;
 
 	// variables to hold the data
 	private int port;
@@ -110,6 +111,9 @@ public class ConfigData {
 				else if (inputTrimmed.startsWith(MAX_THREADS)) {
 					value = lineOfInput.substring(indexOfEqauls + 1, lineOfInput.length()).trim();
 					maxThreads = Integer.parseInt(value);
+					if(maxThreads <= 0) {
+						maxThreads = DEFAUL_NUM_OF_THREADS;
+					}
 				}
 
 			} else { // if there aren't any values past the '='

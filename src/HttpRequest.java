@@ -65,7 +65,6 @@ public class HttpRequest implements Runnable {
 		System.out.println("Header: \n" + requestOfClient.Header.toString());
 		System.out.println("Body: \n" + requestOfClient.Body.toString());
 		responseHandler();
-	
 	}
 	// TODO: implement Chunks
 	
@@ -88,11 +87,13 @@ public class HttpRequest implements Runnable {
 		String date = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss zzzz", Locale.US).format(System.currentTimeMillis());
 		switch (requestOfClient.responseCode) {
 		case OK_200:
+			
 			if (requestOfClient.requestType == RequestType.TRACE) {
 				pageContent = requestOfClient.Header.toString().getBytes();
 			} else if (requestOfClient.requestType != RequestType.HEAD) {
 				pageContent = getFileContent(requestOfClient.requestedFile);
 			}
+			
 			httpResponse.append("HTTP/1.0 " + OK_200 + CRLF);
 			httpResponse.append("Date: " + date + CRLF);
 			httpResponse.append("Server: " + SERVER_NAME + CRLF);
@@ -103,6 +104,7 @@ public class HttpRequest implements Runnable {
 			else {
 				httpResponse.append("Content-Length: " + pageContent.length + CRLF);
 			}
+			
 			httpResponse.append(CRLF);
 			break;
 		case NOT_FOUND_404:
