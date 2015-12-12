@@ -222,12 +222,13 @@ public class HttpRequest implements Runnable {
 						// writing the chunk to client
 						writerToClient.writeBytes(Integer.toHexString(fillChunkCounter) + CRLF);
 						writerToClient.writeBytes(CRLF);
-						writerToClient.write(chunkedData, 0, fillChunkCounter);			
+						writerToClient.write(chunkedData, 0, fillChunkCounter);		
+						writerToClient.flush();
 					}
 					// write ending chunk
 					writerToClient.writeBytes(0 + CRLF);
 					writerToClient.writeBytes(CRLF);
-						
+					writerToClient.flush();
 				}
 				else {
 					writerToClient.write(pageContent);
