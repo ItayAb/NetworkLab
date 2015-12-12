@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.Random;
 import java.util.concurrent.Semaphore;
 
 public class HttpRequest implements Runnable {
@@ -191,9 +192,33 @@ public class HttpRequest implements Runnable {
 
 			writerToClient.writeBytes(responseMessage);
 
+			// TODO: chunked transer needs testing
 			if (pageContent != null) {
-				writerToClient.write(pageContent);
-				writerToClient.flush();
+				if (requestOfClient.isChunked) { //in case chunked
+					int currentChunkSize = -1;
+					int pageContentCounter = 0;
+					while (pageContentCounter < pageContent.length) {
+						currentChunkSize = new Random().nextInt(15) + 1;
+						int fillChunkCounter = 0;
+						byte[] chunkedData = new byte[currentChunkSize];
+						// loading the chunk
+						while (fillChunkCounter < currentChunkSize && pageContentCounter < pageContent.length) {
+							chunkedData[fillChunkCounter++] = pageContent[pageContentCounter++];
+						}
+						// writing the chunk to client
+						writerToClient.writeBytes(Integer.toHexString(fillChunkCounter) + CRLF);
+						writerToClient.writeBytes(CRLF);
+						writerToClient.write(chunkedData, 0, fillChunkCounter);			
+					}
+					// write ending chunk
+					writerToClient.writeBytes(0 + CRLF);
+					writerToClient.writeBytes(CRLF);
+						
+				}
+				else {
+					writerToClient.write(pageContent);
+					writerToClient.flush();					
+				}
 			}
 
 		} catch (IOException e) {
