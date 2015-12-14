@@ -4,8 +4,6 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-// TODO: ask if content of config.ini has "root" or could have "Root"?
-
 public class ConfigData {
 
 	// constants for the config.ini
@@ -90,7 +88,6 @@ public class ConfigData {
 					} catch (Exception e) {
 						throw new ExceptionInInitializerError("Error with the port value!");
 					}
-					// TODO: add throws
 				}
 				// check root
 				else if (inputTrimmed.startsWith(ROOT)) {

@@ -79,7 +79,6 @@ public class HttpRequest implements Runnable {
 		return extension;
 	}
 	
-	// TODO: see if this method is what Tsvi meant
 	private String getContentTypeInHeader(String requestPage){
 		String contentTypeHeader = null;
 		String extension = getExtension(requestPage);
@@ -217,7 +216,7 @@ public class HttpRequest implements Runnable {
 					int currentChunkSize = -1;
 					int pageContentCounter = 0;
 					while (pageContentCounter < pageContent.length) {
-						currentChunkSize = new Random().nextInt(15) + 1;
+						currentChunkSize = new Random().nextInt(100) + 1;
 						int fillChunkCounter = 0;
 						byte[] chunkedData = new byte[currentChunkSize];
 						// loading the chunk
@@ -225,12 +224,19 @@ public class HttpRequest implements Runnable {
 							chunkedData[fillChunkCounter++] = pageContent[pageContentCounter++];
 						}
 						// writing the chunk to client
+						//TODO delete syso
+						System.out.print("Size in hex " + Integer.toHexString(fillChunkCounter) + CRLF);
+						System.out.print(CRLF);
+						System.out.println(chunkedData);
 						writerToClient.writeBytes(Integer.toHexString(fillChunkCounter) + CRLF);
 						writerToClient.writeBytes(CRLF);
 						writerToClient.write(chunkedData, 0, fillChunkCounter);		
 						writerToClient.flush();
 					}
 					// write ending chunk
+					//TODO delete syso's
+					System.out.print(0+CRLF);
+					System.out.print(CRLF);
 					writerToClient.writeBytes(0 + CRLF);
 					writerToClient.writeBytes(CRLF);
 					writerToClient.flush();
@@ -242,7 +248,6 @@ public class HttpRequest implements Runnable {
 			}
 
 		} catch (IOException e) {
-			System.out.println(e.getMessage()); //TODO: delete this row?
 			System.out.println("Error in writing response to client!");
 		} finally {
 			try {
