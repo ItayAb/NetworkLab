@@ -11,17 +11,11 @@ public class Server {
 	MailNotifier mailNotfiyService;
 	private static Object lock = new Object();
 	
-	public Server() {
+	public Server() throws Exception {
 		mailNotfiyService = new MailNotifier();
 		data = new ConfigData();
-		try {
-			data.Load();
-			threadPool = new Semaphore(data.getMaxThreads());
-		} catch (Exception e) {
-			System.out.println("Could not open Server!");
-			System.out.println("Error in loading data! please check config.ini");
-			System.out.println("Server will shut down...");
-		}
+		data.Load();
+		threadPool = new Semaphore(data.getMaxThreads());
 	}	
 	
 	private void sendMail(){		
@@ -60,9 +54,8 @@ public class Server {
 				// Start the thread.
 				thread.start();
 				
-				
 			}
-		} catch (IOException | InterruptedException e) {			
+		} catch (Exception e) {			
 			System.out.println("Error in server initialization\nServer is shutting down...");
 		} finally {
 			

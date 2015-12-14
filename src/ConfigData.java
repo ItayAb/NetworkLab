@@ -14,7 +14,6 @@ public class ConfigData {
 	private final String ROOT = "root";
 	private final String DEFAULT_PAGE = "defaultPage";
 	private final String MAX_THREADS = "maxThreads";
-	private final int DEFAUL_NUM_OF_THREADS = 1;
 
 	// variables to hold the data
 	private int port;
@@ -75,7 +74,7 @@ public class ConfigData {
 		}
 	}
 
-	private void parserInputLine(String lineOfInput) throws Exception {
+	private void parserInputLine(String lineOfInput) throws Exception{
 		String value;
 		String inputTrimmed = lineOfInput.trim();
 		int indexOfEqauls = inputTrimmed.indexOf('=');
@@ -85,8 +84,13 @@ public class ConfigData {
 			if (inputTrimmed.length() > indexOfEqauls) {
 				// check port
 				if (inputTrimmed.startsWith(PORT)) {
-					value = lineOfInput.substring(indexOfEqauls + 1, lineOfInput.length()).trim();
-					port = Integer.parseInt(value);
+					try {
+						value = lineOfInput.substring(indexOfEqauls + 1, lineOfInput.length()).trim();
+						port = Integer.parseInt(value);						
+					} catch (Exception e) {
+						throw new ExceptionInInitializerError("Error with the port value!");
+					}
+					// TODO: add throws
 				}
 				// check root
 				else if (inputTrimmed.startsWith(ROOT)) {
@@ -94,7 +98,7 @@ public class ConfigData {
 					if (new File(value).exists() && new File(value).isDirectory()) {
 						root = value;
 					} else {
-						throw new Exception("Error with the root path!");
+						throw new ExceptionInInitializerError("Error with the root path!");
 					}
 				}
 				// check default page TODO: check if file is .html
@@ -103,24 +107,30 @@ public class ConfigData {
 					if (new File(value).exists() && new File(value).isFile()) {
 						defaultPage = value;
 					} else {
-						throw new Exception("Error with the default page path!");
+						throw new ExceptionInInitializerError("Error with the default page path!");
 					}
 				}
 
 				// check max threads
 				else if (inputTrimmed.startsWith(MAX_THREADS)) {
-					value = lineOfInput.substring(indexOfEqauls + 1, lineOfInput.length()).trim();
-					maxThreads = Integer.parseInt(value);
-					if(maxThreads <= 0) {
-						maxThreads = DEFAUL_NUM_OF_THREADS;
+					try {
+						value = lineOfInput.substring(indexOfEqauls + 1, lineOfInput.length()).trim();
+						maxThreads = Integer.parseInt(value);
+						if (maxThreads < 1) {
+							System.out.println("Error in maxThread value! please check the config.ini");
+							throw new ExceptionInInitializerError("value must be larger than 1");
+						}
+						
+					} catch (Exception e) {						
+						throw new ExceptionInInitializerError("Error in maxThread value! please check the config.ini");
 					}
 				}
 
 			} else { // if there aren't any values past the '='
-				throw new Exception("Data in the config.ini is malformed|corrupt");
+				throw new ExceptionInInitializerError("Data in the config.ini is malformed|corrupt");
 			}
 		} else {// in case there wasn't '='
-			throw new Exception("Data in the config.ini is malformed|corrupt");
+			throw new ExceptionInInitializerError("Data in the config.ini is malformed|corrupt");
 		}
 
 	}
