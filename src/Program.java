@@ -16,12 +16,13 @@ public class Program {
 		}
 		catch (IOException e) {
 				System.out.println("Error in reading from config.ini");
-		} catch (Exception e) {			
+		} 
+		catch (Exception e) {			
 			System.out.println("Unexpected error in server initialization!");
 		}
 		finally
 		{			
-			System.out.println("Server will shut down");
+			System.out.println("Server is shutting down");
 		}
 	}
 }

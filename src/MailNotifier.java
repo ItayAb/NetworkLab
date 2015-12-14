@@ -62,7 +62,7 @@ public class MailNotifier {
 				msg.setSubject(SUBJECT);
 				msg.setText(msgBody);
 				Transport.send(msg);
-				System.out.println("Email sent successfully...");
+				System.out.println("An email notification was sent to " + dataLoader.Recipient());
 
 			} catch (AddressException e) {
 				System.out.println("Error in sending mail");

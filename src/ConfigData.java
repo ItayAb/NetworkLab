@@ -118,7 +118,7 @@ public class ConfigData {
 						maxThreads = Integer.parseInt(value);
 						if (maxThreads < 1) {
 							System.out.println("Error in maxThread value! please check the config.ini");
-							throw new ExceptionInInitializerError("value must be larger than 1");
+							throw new ExceptionInInitializerError("value must be a whole number and larger than 0");
 						}
 						
 					} catch (Exception e) {						

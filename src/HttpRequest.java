@@ -64,10 +64,8 @@ public class HttpRequest implements Runnable {
 	private void proccessRequest() throws IOException {
 		requestOfClient.ParseRequest(clientSocket);
 		System.out.println("Header: \n" + requestOfClient.Header.toString());
-		System.out.println("Body: \n" + requestOfClient.Body.toString());
 		responseHandler();
 	}
-	// TODO: implement Chunks
 	
 	private String getExtension(String fileName) {
 		String extension = "";
@@ -150,6 +148,13 @@ public class HttpRequest implements Runnable {
 			httpResponse.append(CRLF);
 			break;
 		case INTERNAL_SERVER_ERROR_500:
+			pageContent = createHtmlFormat(INTERNAL_SERVER_ERROR_500);
+			httpResponse.append("HTTP/1.0 " + INTERNAL_SERVER_ERROR_500 + CRLF);
+			httpResponse.append("Date: " + date + CRLF);
+			httpResponse.append("Server: " + SERVER_NAME + CRLF);
+			httpResponse.append("Content-Type: text/html" + CRLF);
+			httpResponse.append("Content-Length: " + pageContent.length + CRLF);
+			httpResponse.append(CRLF);
 			break;
 
 		default:
@@ -180,8 +185,8 @@ public class HttpRequest implements Runnable {
 			}
 		} catch (Exception e) {
 			System.out.println("Error in reading request page!");
-			sendMessageToClient(INTERNAL_SERVER_ERROR_500, createHtmlFormat(INTERNAL_SERVER_ERROR_500));
-
+			requestOfClient.responseCode = HttpResponseCode.INTERNAL_SERVER_ERROR_500;
+			responseHandler();
 		} finally {
 			if (fileReader != null) {
 				try {
@@ -237,7 +242,7 @@ public class HttpRequest implements Runnable {
 			}
 
 		} catch (IOException e) {
-			System.out.println(e.getMessage());
+			System.out.println(e.getMessage()); //TODO: delete this row?
 			System.out.println("Error in writing response to client!");
 		} finally {
 			try {
