@@ -4,4 +4,5 @@ public enum RequestType {
 	POST,
 	HEAD,
 	TRACE,
+	OPTIONS,
 }

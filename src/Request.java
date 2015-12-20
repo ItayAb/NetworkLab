@@ -86,28 +86,18 @@ public class Request {
 			}
 		}
 
-		if (isValidHeader) {	
-			
-			// TODO: check cases of bad request
-			if (requestType == RequestType.POST && contentLength == -1) {
-				responseCode = HttpResponseCode.BAD_REQUEST_400;
-				return;
-			}
-			
-			if (requestType.equals(RequestType.POST)) { // TODO: are there more
-				// requestTypes the have
-				// params in body?
+		if (isValidHeader) {
+			if (requestType == RequestType.POST) {
 				parseParamsFromBody();
 			}
-			
+
 			if (requestedPage.equals(PARAMS_PAGE_NAME)) {
 				initParamsInfoHtml();
 			}
 			if (responseCode == null) {
 				updateResponseCode();
 			}
-		}
-		else {
+		} else {
 			responseCode = HttpResponseCode.BAD_REQUEST_400;
 		}
 	}
@@ -136,16 +126,14 @@ public class Request {
 
 	}
 
-	//TODO: check if numeric parameters are legal i.e. ?8=9&2=6
 	private boolean isValidHeader(String inputMessage) {
 		boolean isValid = false;
-//		boolean isValidUrlParams = checkValidUrlParams(inputMessage); 
 		String[] headerDivided = inputMessage.split(" ");
 		if (headerDivided.length > 2) {
 			if (headerDivided[0].length() > 0) {
 				if (headerDivided[1].startsWith("/") && !(headerDivided[1].contains("/%20"))) {
-					if (headerDivided[2].startsWith("HTTP/1.0") || headerDivided[2].startsWith("HTTP/1.1")){
-						
+					if (headerDivided[2].startsWith("HTTP/1.0") || headerDivided[2].startsWith("HTTP/1.1")) {
+
 						isValid = true;
 					}
 				}
@@ -154,44 +142,6 @@ public class Request {
 
 		return isValid;
 	}
-	
-	// GET /index.html?x=2&8=2&y=3 /HTTP/1.0
-//	private boolean checkValidUrlParams(String lineOfInput){
-//		boolean isValidUrlParamsResult = false;
-//		int indexOfQuestionMark = lineOfInput.indexOf("?");
-//		if (indexOfQuestionMark != -1) { 
-//			int indexOfSecondQuestionMark = lineOfInput.substring(indexOfQuestionMark + 1).indexOf("?");
-//			if (indexOfSecondQuestionMark == -1) {
-//				// is valid numeric
-//				String[] splitAccordingToQuestionMark = lineOfInput.split("?");
-//				int indexOfLastWhiteSpace = splitAccordingToQuestionMark[1].trim().indexOf(" ");
-//				String paramsInUrl = splitAccordingToQuestionMark[1].substring(0, indexOfLastWhiteSpace);
-//				String[] splitToParams = paramsInUrl.split("&");
-//				boolean isAllNotNumeric = false;
-//				for (int i = 0; i < splitToParams.length; i++) {
-//					String[] splitToVarAndValue = splitToParams[i].split("=");
-//					if (intTryParse(splitToVarAndValue[0].trim().charAt(0))) {
-//						isAllNotNumeric = true;
-//						break;
-//					}
-//				}
-//			}
-//		}
-//		else {
-//			isValidUrlParamsResult = true;
-//		}
-//		
-//		return isValidUrlParamsResult;
-//	}
-	
-//	private boolean intTryParse(String tryToParse){
-//		try {
-//			Integer.parseInt(tryToParse);
-//			return true;
-//			} catch (NumberFormatException e) {
-//			return false;
-//		}
-//	}
 
 	private void extractRequestedPage(String inputMessage) {
 		String pageToReturn = null;
@@ -226,7 +176,7 @@ public class Request {
 					if (split.length == 2) { // there is key and value data
 						paramsFromClient.put(split[0], split[1]);
 
-					} else if (split.length == 1) { 
+					} else if (split.length == 1) {
 						paramsFromClient.put(split[0], "");
 					}
 				}
@@ -235,12 +185,11 @@ public class Request {
 	}
 
 	private void extractContentLength(String lineOfInput) {
-		try{
+		try {
 			int indexOfColon = lineOfInput.indexOf(":") + 1;
 			String length = lineOfInput.substring(indexOfColon).trim();
 			contentLength = Integer.parseInt(length);
-		}
-		catch (Exception e){
+		} catch (Exception e) {
 			System.out.println("Error, corrupt content-length in header");
 			responseCode = HttpResponseCode.BAD_REQUEST_400;
 		}
@@ -256,6 +205,7 @@ public class Request {
 
 		if (requestType == null) {
 			responseCode = HttpResponseCode.NOT_IMPLEMENTED_501;
+
 		}
 	}
 
@@ -271,7 +221,7 @@ public class Request {
 			htmlTable.append("<td>" + paramsFromClient.get(variableName) + "</td>\n");
 			htmlTable.append("</tr>\n");
 		}
-		
+
 		htmlTable.append("</table>\n");
 		htmlTable.append("</body>\n");
 		htmlTable.append("</html>\n");

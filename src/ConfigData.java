@@ -98,7 +98,6 @@ public class ConfigData {
 						throw new ExceptionInInitializerError("Error with the root path!");
 					}
 				}
-				// check default page TODO: check if file is .html
 				else if (inputTrimmed.startsWith(DEFAULT_PAGE)) {
 					value = lineOfInput.substring(indexOfEqauls + 1, lineOfInput.length()).trim();
 					if (new File(value).exists() && new File(value).isFile()) {

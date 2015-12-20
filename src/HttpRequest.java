@@ -47,6 +47,8 @@ public class HttpRequest implements Runnable {
 		try {
 			proccessRequest();
 		} catch (Exception e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
 			System.out.println("Error: could not send response!");
 		} finally {
 			threadPool.release();
@@ -93,77 +95,108 @@ public class HttpRequest implements Runnable {
 	}
 
 	private void responseHandler() {
-		// TODO : content-type: application/octet-stream
-		StringBuilder httpResponse = new StringBuilder();
-		byte[] pageContent = null;
+		StringBuilder httpResponseHeader = new StringBuilder();
+		byte[] httpResponseBody = null;
 		String date = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss zzzz", Locale.US).format(System.currentTimeMillis());
 		switch (requestOfClient.responseCode) {
 		case OK_200:
 			
-			if (requestOfClient.requestType == RequestType.TRACE) {
-				pageContent = requestOfClient.Header.toString().getBytes();
-			} else if (requestOfClient.requestType != RequestType.HEAD) {
-				pageContent = getFileContent(requestOfClient.requestedFile);
-			}
-			
-			httpResponse.append("HTTP/1.0 " + OK_200 + CRLF);
-			httpResponse.append("Date: " + date + CRLF);
-			httpResponse.append("Server: " + SERVER_NAME + CRLF);
-			httpResponse.append(getContentTypeInHeader(requestOfClient.requestedPage) + CRLF);
+			httpResponseBody = getBodyOfResponse();
+			httpResponseHeader.append("HTTP/1.0 " + OK_200 + CRLF);
+			httpResponseHeader.append("Date: " + date + CRLF);
+			httpResponseHeader.append("Server: " + SERVER_NAME + CRLF);
+			httpResponseHeader.append(getContentTypeInHeader(requestOfClient.requestedPage) + CRLF);
 			if (requestOfClient.isChunked) {
-				httpResponse.append("transfer-encoding: chunked");
+				httpResponseHeader.append("transfer-encoding: chunked");
 			}
 			else {
-				httpResponse.append("Content-Length: " + pageContent.length + CRLF);
+				httpResponseHeader.append("Content-Length: " + httpResponseBody.length + CRLF);
 			}
 			
-			httpResponse.append(CRLF);
+			httpResponseHeader.append(CRLF);
 			break;
 		case NOT_FOUND_404:
-			pageContent = createHtmlFormat(NOT_FOUND_404);
-			httpResponse.append("HTTP/1.0 " + NOT_FOUND_404 + CRLF);
-			httpResponse.append("Date: " + date + CRLF);
-			httpResponse.append("Server: " + SERVER_NAME + CRLF);
-			httpResponse.append("Content-Type: text/html" + CRLF);
-			httpResponse.append("Content-Length: " + pageContent.length + CRLF);
-			httpResponse.append(CRLF);
+			httpResponseBody = createHtmlFormat(NOT_FOUND_404);
+			httpResponseHeader.append("HTTP/1.0 " + NOT_FOUND_404 + CRLF);
+			httpResponseHeader.append("Date: " + date + CRLF);
+			httpResponseHeader.append("Server: " + SERVER_NAME + CRLF);
+			httpResponseHeader.append("Content-Type: text/html" + CRLF);
+			httpResponseHeader.append("Content-Length: " + httpResponseBody.length + CRLF);
+			httpResponseHeader.append(CRLF);
 			break;
 		case NOT_IMPLEMENTED_501:
-			pageContent = createHtmlFormat(NOT_IMPLEMENTED_501);
-			httpResponse.append("HTTP/1.0 " + NOT_IMPLEMENTED_501 + CRLF);
-			httpResponse.append("Date: " + date + CRLF);
-			httpResponse.append("Server: " + SERVER_NAME + CRLF);
-			httpResponse.append("Content-Type: text/html" + CRLF);
-			httpResponse.append("Content-Length: " + pageContent.length + CRLF);
-			httpResponse.append(CRLF);
+			httpResponseBody = createHtmlFormat(NOT_IMPLEMENTED_501);
+			httpResponseHeader.append("HTTP/1.0 " + NOT_IMPLEMENTED_501 + CRLF);
+			httpResponseHeader.append("Date: " + date + CRLF);
+			httpResponseHeader.append("Server: " + SERVER_NAME + CRLF);
+			httpResponseHeader.append("Content-Type: text/html" + CRLF);
+			httpResponseHeader.append("Content-Length: " + httpResponseBody.length + CRLF);
+			httpResponseHeader.append(CRLF);
 			break;
 		case BAD_REQUEST_400:
-			pageContent = createHtmlFormat(BAD_REQUEST_400);
-			httpResponse.append("HTTP/1.0 " + BAD_REQUEST_400 + CRLF);
-			httpResponse.append("Date: " + date + CRLF);
-			httpResponse.append("Server: " + SERVER_NAME + CRLF);
-			httpResponse.append("Content-Type: text/html" + CRLF);
-			httpResponse.append("Content-Length: " + pageContent.length + CRLF);
-			httpResponse.append(CRLF);
+			httpResponseBody = createHtmlFormat(BAD_REQUEST_400);
+			httpResponseHeader.append("HTTP/1.0 " + BAD_REQUEST_400 + CRLF);
+			httpResponseHeader.append("Date: " + date + CRLF);
+			httpResponseHeader.append("Server: " + SERVER_NAME + CRLF);
+			httpResponseHeader.append("Content-Type: text/html" + CRLF);
+			httpResponseHeader.append("Content-Length: " + httpResponseBody.length + CRLF);
+			httpResponseHeader.append(CRLF);
 			break;
 		case INTERNAL_SERVER_ERROR_500:
-			pageContent = createHtmlFormat(INTERNAL_SERVER_ERROR_500);
-			httpResponse.append("HTTP/1.0 " + INTERNAL_SERVER_ERROR_500 + CRLF);
-			httpResponse.append("Date: " + date + CRLF);
-			httpResponse.append("Server: " + SERVER_NAME + CRLF);
-			httpResponse.append("Content-Type: text/html" + CRLF);
-			httpResponse.append("Content-Length: " + pageContent.length + CRLF);
-			httpResponse.append(CRLF);
+			httpResponseBody = createHtmlFormat(INTERNAL_SERVER_ERROR_500);
+			httpResponseHeader.append("HTTP/1.0 " + INTERNAL_SERVER_ERROR_500 + CRLF);
+			httpResponseHeader.append("Date: " + date + CRLF);
+			httpResponseHeader.append("Server: " + SERVER_NAME + CRLF);
+			httpResponseHeader.append("Content-Type: text/html" + CRLF);
+			httpResponseHeader.append("Content-Length: " + httpResponseBody.length + CRLF);
+			httpResponseHeader.append(CRLF);
 			break;
 
 		default:
 			break;
 		}
 
-		sendMessageToClient(httpResponse.toString(), pageContent);
+		sendMessageToClient(httpResponseHeader.toString(), httpResponseBody);
 
 	}
 
+	
+	private byte[] getBodyOfResponse(){
+		byte[] bodyToReturn = null;
+		switch (requestOfClient.requestType) {
+		case GET:
+			bodyToReturn = getFileContent(requestOfClient.requestedFile);
+			break;
+		case HEAD:
+			bodyToReturn = getFileContent(requestOfClient.requestedFile);
+			break;
+		case POST:
+			bodyToReturn = getFileContent(requestOfClient.requestedFile);
+			break;
+		case TRACE:
+			bodyToReturn = requestOfClient.Header.toString().getBytes();
+			break;
+		case OPTIONS:
+			StringBuilder allRequest = new StringBuilder();
+			allRequest.append("Allow: ");
+			int counterOfRequest = RequestType.values().length;
+			for (RequestType requestRunner : RequestType.values()) {
+				if (counterOfRequest-- > 1) {
+					allRequest.append(requestRunner.toString() + ", ");					
+				}
+				else {
+					allRequest.append(requestRunner);
+				}
+			}
+			
+			bodyToReturn = allRequest.toString().getBytes();
+			break;
+		}
+		
+		return bodyToReturn;
+	}
+	
+	
 	private byte[] createHtmlFormat(String text) {
 		String entityBody = "<HTML>" + "<HEAD><TITLE>" + text + "</TITLE></HEAD>" + "<BODY><H1>" + text + "</H1></BODY></HTML>";
 		byte[] entityAsByteArray = new byte[entityBody.length()];
@@ -199,50 +232,44 @@ public class HttpRequest implements Runnable {
 		return pageContent;
 	}
 
-	private void sendMessageToClient(String responseMessage, byte[] pageContent) {
+	private void sendMessageToClient(String responseHeader, byte[] responseBody) {
 
 		DataOutputStream writerToClient = null;
 		try {
 
 			writerToClient = new DataOutputStream(clientSocket.getOutputStream());
 			// printing response header
-			System.out.println("Response Header:\n" + responseMessage);
+			System.out.println("Response Header:\n" + responseHeader);
 
-			writerToClient.writeBytes(responseMessage);
+			writerToClient.writeBytes(responseHeader);
 
-			// TODO: chunked transer needs testing
-			if (pageContent != null) {
+			// writing Body to client
+			if (responseBody != null && requestOfClient.requestType != RequestType.HEAD) {
 				if (requestOfClient.isChunked) { //in case chunked
 					int currentChunkSize = -1;
 					int pageContentCounter = 0;
-					while (pageContentCounter < pageContent.length) {
+					while (pageContentCounter < responseBody.length) {
 						currentChunkSize = new Random().nextInt(100) + 1;
 						int fillChunkCounter = 0;
 						byte[] chunkedData = new byte[currentChunkSize];
 						// loading the chunk
-						while (fillChunkCounter < currentChunkSize && pageContentCounter < pageContent.length) {
-							chunkedData[fillChunkCounter++] = pageContent[pageContentCounter++];
+						while (fillChunkCounter < currentChunkSize && pageContentCounter < responseBody.length) {
+							chunkedData[fillChunkCounter++] = responseBody[pageContentCounter++];
 						}
 						// writing the chunk to client
-						//TODO delete syso
-						System.out.print("Size in hex " + Integer.toHexString(fillChunkCounter) + CRLF);
-						System.out.print(CRLF);
-						System.out.println(chunkedData);
 						writerToClient.writeBytes(Integer.toHexString(fillChunkCounter) + CRLF);
 						writerToClient.writeBytes(CRLF);
-						writerToClient.write(chunkedData, 0, fillChunkCounter);		
+						writerToClient.write(chunkedData, 0, fillChunkCounter);	
+						writerToClient.writeBytes(CRLF);
 						writerToClient.flush();
 					}
 					// write ending chunk
-					//TODO delete syso's
-					System.out.print(0+CRLF);
-					System.out.print(CRLF);
 					writerToClient.writeBytes(0 + CRLF);
 					writerToClient.writeBytes(CRLF);
 					writerToClient.flush();
 				}
 				else {
-					writerToClient.write(pageContent);
+					writerToClient.write(responseBody);
 					writerToClient.flush();					
 				}
 			}
