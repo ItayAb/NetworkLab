@@ -12,12 +12,22 @@ public class ConfigData {
 	private final String ROOT = "root";
 	private final String DEFAULT_PAGE = "defaultPage";
 	private final String MAX_THREADS = "maxThreads";
+	private final String MAX_DOWNLOADERS = "maxDownloaders";
+	private final String MAX_ANALYZERS = "maxAnalyzers";
+	private final String IMAGE_EXTENSION = "defaultPage";
+	private final String VIDEO_EXTENSION = "maxThreads";
+	private final String DOCUMENT_EXTENSION = "documentExtension";
 
 	// variables to hold the data
 	private int port;
 	private String root;
 	private String defaultPage;
 	private int maxThreads;
+	private int m_MaxDownloads;
+	private int m_MaxAnalyzers;
+	private String[] m_ImageExtension;
+	private String[] m_VideoExtension;
+	private String[] m_DocumentExtension;
 
 	// dynamically find the Config.ini path
 	private String pathOfConfig;
@@ -40,6 +50,26 @@ public class ConfigData {
 
 	public int getMaxThreads() {
 		return maxThreads;
+	}
+
+	public int getMaxDownloaders() {
+		return m_MaxDownloads;
+	}
+
+	public int getMaxAnalyzers() {
+		return m_MaxAnalyzers;
+	}
+
+	public String[] getImageExtensions() {
+		return m_ImageExtension;
+	}
+
+	public String[] getVideoExtensions() {
+		return m_VideoExtension;
+	}
+
+	public String[] getDocumentExtensions() {
+		return m_DocumentExtension;
 	}
 
 	public void Load() throws Exception {
@@ -72,34 +102,33 @@ public class ConfigData {
 		}
 	}
 
-	private void parserInputLine(String lineOfInput) throws Exception{
+	private void parserInputLine(String lineOfInput) throws Exception {
 		String value;
 		String inputTrimmed = lineOfInput.trim();
-		int indexOfEqauls = inputTrimmed.indexOf('=');
+		int indexOfEquals = inputTrimmed.indexOf('=');
 		// check existence of '='
-		if (indexOfEqauls != -1) {
+		if (indexOfEquals != -1) {
 			// check existence of data past the '='
-			if (inputTrimmed.length() > indexOfEqauls) {
+			if (inputTrimmed.length() > indexOfEquals) {
 				// check port
 				if (inputTrimmed.startsWith(PORT)) {
 					try {
-						value = lineOfInput.substring(indexOfEqauls + 1, lineOfInput.length()).trim();
-						port = Integer.parseInt(value);						
+						value = lineOfInput.substring(indexOfEquals + 1, lineOfInput.length()).trim();
+						port = Integer.parseInt(value);
 					} catch (Exception e) {
 						throw new ExceptionInInitializerError("Error with the port value!");
 					}
 				}
 				// check root
 				else if (inputTrimmed.startsWith(ROOT)) {
-					value = lineOfInput.substring(indexOfEqauls + 1, lineOfInput.length()).trim();
+					value = lineOfInput.substring(indexOfEquals + 1, lineOfInput.length()).trim();
 					if (new File(value).exists() && new File(value).isDirectory()) {
 						root = value;
 					} else {
 						throw new ExceptionInInitializerError("Error with the root path!");
 					}
-				}
-				else if (inputTrimmed.startsWith(DEFAULT_PAGE)) {
-					value = lineOfInput.substring(indexOfEqauls + 1, lineOfInput.length()).trim();
+				} else if (inputTrimmed.startsWith(DEFAULT_PAGE)) {
+					value = lineOfInput.substring(indexOfEquals + 1, lineOfInput.length()).trim();
 					if (new File(value).exists() && new File(value).isFile()) {
 						defaultPage = value;
 					} else {
@@ -110,15 +139,79 @@ public class ConfigData {
 				// check max threads
 				else if (inputTrimmed.startsWith(MAX_THREADS)) {
 					try {
-						value = lineOfInput.substring(indexOfEqauls + 1, lineOfInput.length()).trim();
+						value = lineOfInput.substring(indexOfEquals + 1, lineOfInput.length()).trim();
 						maxThreads = Integer.parseInt(value);
 						if (maxThreads < 1) {
 							System.out.println("Error in maxThread value! please check the config.ini");
 							throw new ExceptionInInitializerError("value must be a whole number and larger than 0");
 						}
-						
-					} catch (Exception e) {						
+
+					} catch (Exception e) {
 						throw new ExceptionInInitializerError("Error in maxThread value! please check the config.ini");
+					}
+				// check Max Downloaders
+				} else if (inputTrimmed.startsWith(MAX_DOWNLOADERS)) {
+					try {
+						value = lineOfInput.substring(indexOfEquals + 1, lineOfInput.length()).trim();
+						m_MaxDownloads = Integer.parseInt(value);
+						if (m_MaxDownloads < 1) {
+							System.out.println("Error in maxThread value! please check the config.ini");
+							throw new ExceptionInInitializerError("value must be a whole number and larger than 0");
+						}
+					} catch (Exception e) {
+						throw new ExceptionInInitializerError("Error with the maxDownloaders value!");
+					}
+				}
+				// check max Analyzers
+				else if (inputTrimmed.startsWith(MAX_ANALYZERS)) {
+					try {
+						value = lineOfInput.substring(indexOfEquals + 1, lineOfInput.length()).trim();
+						m_MaxAnalyzers = Integer.parseInt(value);
+						if (m_MaxAnalyzers < 1) {
+							System.out.println("Error in maxThread value! please check the config.ini");
+							throw new ExceptionInInitializerError("value must be a whole number and larger than 0");
+						}
+					} catch (Exception e) {
+						throw new ExceptionInInitializerError("Error with the maxAnalyzers value!");
+					}
+				// check Image Extension
+				} else if (inputTrimmed.startsWith(IMAGE_EXTENSION)) {
+					value = lineOfInput.substring(indexOfEquals + 1, lineOfInput.length()).trim();
+					String[] allImageExtension;
+					try {
+						allImageExtension = value.split(",");
+						for (int i = 0; i < allImageExtension.length; i++) {
+							allImageExtension[i] = allImageExtension[i].trim();
+						}
+						m_ImageExtension = allImageExtension;
+					} catch (Exception e) {
+						throw new ExceptionInInitializerError("Error with the imageExtension values!");
+					}
+				// check Video Extension
+				} else if (inputTrimmed.startsWith(VIDEO_EXTENSION)) {
+					value = lineOfInput.substring(indexOfEquals + 1, lineOfInput.length()).trim();
+					String[] allVideoExtension;
+					try {
+						allVideoExtension = value.split(",");
+						for (int i = 0; i < allVideoExtension.length; i++) {
+							allVideoExtension[i] = allVideoExtension[i].trim();
+						}
+						m_VideoExtension = allVideoExtension;
+					} catch (Exception e) {
+						throw new ExceptionInInitializerError("Error with the videoExtension values!");
+					}
+				// check Document Extension
+				} else if (inputTrimmed.startsWith(DOCUMENT_EXTENSION)) {
+					value = lineOfInput.substring(indexOfEquals + 1, lineOfInput.length()).trim();
+					String[] allDocumentExtension;
+					try {
+						allDocumentExtension = value.split(",");
+						for (int i = 0; i < allDocumentExtension.length; i++) {
+							allDocumentExtension[i] = allDocumentExtension[i].trim();
+						}
+						m_DocumentExtension = allDocumentExtension;
+					} catch (Exception e) {
+						throw new ExceptionInInitializerError("Error with the videoExtension values!");
 					}
 				}
 

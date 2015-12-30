@@ -39,6 +39,7 @@ public class Server {
 			System.out.println("Listening on port: " + data.getPort());
 			// Process HTTP service requests in an infinite loop.
 			while (true) {				
+
 				threadPool.acquire();
 				// Listen for a TCP connection request.
 				client = serverSocket.accept();

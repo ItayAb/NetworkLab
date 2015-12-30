@@ -63,9 +63,14 @@ public class HttpRequest implements Runnable {
 		}
 	}
 
-	private void proccessRequest() throws IOException {
+	private void proccessRequest() throws Exception {
 		requestOfClient.ParseRequest(clientSocket);
 		System.out.println("Header: \n" + requestOfClient.Header.toString());
+		// web crawler need to be initialized
+		if (requestOfClient.Header.toString().equals("POST /params_info.html HTTP/1.1")) {
+		//	WebCrawler webCrawler = new WebCrawler(ConfigData); // TODO: think how to wisely pass the DataConfig paramater
+			// TODO: return the message "Crawler Started" "Crawler failed"
+		}
 		responseHandler();
 	}
 	

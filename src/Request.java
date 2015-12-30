@@ -6,11 +6,14 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.HashMap;
 
+import javax.mail.internet.ContentType;
+
 public class Request {
 
 	private final String CHUNKED = "chunked: yes";
 	private final String PARAMS_PAGE_NAME = "params_info.html";
 	private final String CONTENT_LENGTH = "Content-Length:";
+	private final String CONTENT_TYPE = "Content-Type:";
 	private String defaultPageName = "index.html";
 	public HttpResponseCode responseCode;
 	public RequestType requestType;
@@ -19,6 +22,7 @@ public class Request {
 	public boolean isChunked;
 	public String requestedPage;
 	public File requestedFile;
+	public String m_TypeContent;
 	private HashMap<String, String> paramsFromClient;
 	private int contentLength;
 	private ConfigData serverData;
@@ -35,7 +39,7 @@ public class Request {
 		paramsFromClient = new HashMap<>();
 	}
 
-	public void ParseRequest(Socket clientSocket) throws IOException {
+	public void ParseRequest(Socket clientSocket) throws Exception {
 		String inputMessage = "";
 		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 		boolean isFirstLine = true;
@@ -60,6 +64,10 @@ public class Request {
 				isChunked = true;
 			}
 
+			if (inputMessage.startsWith(CONTENT_TYPE)) {
+				extractContentType(inputMessage);
+			}
+			
 			if (inputMessage.startsWith(CONTENT_LENGTH)) {
 				extractContentLength(inputMessage);
 				if (responseCode == HttpResponseCode.BAD_REQUEST_400) {
@@ -100,6 +108,22 @@ public class Request {
 		} else {
 			responseCode = HttpResponseCode.BAD_REQUEST_400;
 		}
+	}
+
+	private void extractContentType(String inputLine) throws Exception {
+		int indexOfSemiColon = inputLine.indexOf(":");
+		String typeOfContent = "";
+		if (indexOfSemiColon == -1) {
+			 typeOfContent = inputLine.substring(inputLine.indexOf(CONTENT_TYPE) + 1);
+		}
+		else {
+			if (((indexOfSemiColon - 1) - (inputLine.indexOf(CONTENT_TYPE)+  1)) < 0  ) { // TODO: check the extraction is correct
+				throw new Exception("Couldn't get content type from: " + inputLine);
+			}
+			typeOfContent = inputLine.substring(inputLine.indexOf(CONTENT_TYPE) + 1, indexOfSemiColon - 1);
+		}
+		m_TypeContent = typeOfContent;
+		
 	}
 
 	private void updateResponseCode() {
