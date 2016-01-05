@@ -5,7 +5,7 @@ public class HTML {
 	private String m_Body;
 	private String m_ContentType;
 	
-	public HTML(String header, String body, String contentType) {
+	public HTML(String header, String body, String contentType) { // TODO: no need for content Type
 		m_Header = header;
 		m_Body = body;
 	}

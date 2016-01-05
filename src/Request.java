@@ -23,9 +23,10 @@ public class Request {
 	public String requestedPage;
 	public File requestedFile;
 	public String m_TypeContent;
-	private HashMap<String, String> paramsFromClient;
+	public HashMap<String, String> paramsFromClient;
 	private int contentLength;
-	private ConfigData serverData;
+	public ConfigData serverData;  // TODO: made public so web crawler can get it from HttpRequest, need to think of 
+	// a better way
 
 	public Request(ConfigData data) {
 		requestedFile = null;
@@ -265,6 +266,5 @@ public class Request {
 				writer.close();
 			}
 		}
-
 	}
 }

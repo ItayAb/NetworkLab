@@ -76,7 +76,7 @@ public class ConfigData {
 
 		File configIniFile = null;
 		InputStream in = null;
-		InputStreamReader read = null;
+		InputStreamReader read = null;		
 		BufferedReader dataReader = null;
 		try {
 			configIniFile = new File(pathOfConfig + File.separator + CONFIG_NAME);
@@ -127,7 +127,7 @@ public class ConfigData {
 					} else {
 						throw new ExceptionInInitializerError("Error with the root path!");
 					}
-				} else if (inputTrimmed.startsWith(DEFAULT_PAGE)) {
+				} else if (inputTrimmed.startsWith(DEFAULT_PAGE)) { // TODO: read default without root directory
 					value = lineOfInput.substring(indexOfEquals + 1, lineOfInput.length()).trim();
 					if (new File(value).exists() && new File(value).isFile()) {
 						defaultPage = value;

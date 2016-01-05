@@ -67,11 +67,15 @@ public class HttpRequest implements Runnable {
 		requestOfClient.ParseRequest(clientSocket);
 		System.out.println("Header: \n" + requestOfClient.Header.toString());
 		// web crawler need to be initialized
-		if (requestOfClient.Header.toString().equals("POST /params_info.html HTTP/1.1")) {
-		//	WebCrawler webCrawler = new WebCrawler(ConfigData); // TODO: think how to wisely pass the DataConfig paramater
+		if (requestOfClient.Header.toString().startsWith("POST /params_info.html HTTP/1.1")) {
+			WebCrawler webCrawler = new WebCrawler(requestOfClient.serverData, requestOfClient.paramsFromClient); // TODO: think how to wisely pass the DataConfig paramater
+			webCrawler.Run();
+			//webCrawler.sendResult();
 			// TODO: return the message "Crawler Started" "Crawler failed"
 		}
-		responseHandler();
+		else { // all other cases than the above request the server serves as normal server
+			responseHandler();
+		}
 	}
 	
 	private String getExtension(String fileName) {

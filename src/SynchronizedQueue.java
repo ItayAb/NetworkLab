@@ -1,150 +1,82 @@
-//Itay Abramowsky 304826688
+import java.util.ArrayList;
 
-/**
- * A synchronized bounded-size queue for multithreaded producer-consumer applications.
- * 
- * @param <T> Type of data items
- */
 public class SynchronizedQueue<T> {
 
-	private T[] buffer;
-	private int producers;
-	private int insertIndex;
-	private int extractIndex;
-	private int size;
-	
-	/**
-	 * Constructor. Allocates a buffer (an array) with the given capacity and
-	 * resets pointers and counters.
-	 * @param capacity Buffer capacity
-	 */
-	@SuppressWarnings("unchecked")
-	public SynchronizedQueue(int capacity) {
-		
-		this.buffer = (T[])(new Object[capacity]);
-		this.producers = 0;
-		this.insertIndex = 0;
-		this.extractIndex = 0;
-		this.size = 0;
+	private ArrayList<T> m_InnerList;
+
+	public <T> SynchronizedQueue() {
+		// TODO Auto-generated constructor stub
+		m_InnerList = new ArrayList<>();
 	}
-	
-	/**
-	 * Dequeues the first item from the queue and returns it.
-	 * If the queue is empty but producers are still registered to this queue, 
-	 * this method blocks until some item is available.
-	 * If the queue is empty and no more items are planned to be added to this 
-	 * queue (because no producers are registered), this method returns null.
-	 * 
-	 * @return The first item, or null if there are no more items
-	 * @see #registerProducer()
-	 * @see #unregisterProducer()
-	 */
+
+	public void enqueue(T item) {
+		synchronized (m_InnerList) {
+			m_InnerList.add(item);
+			m_InnerList.notifyAll();
+		}
+	}
+
 	public T dequeue() {
-		synchronized (this) {
-			//if there are no items in list
-			while (this.getSize()==0) {
-				//no items in list and no producer to put items then return null
-				if (producers==0) {
-					return null;
-				}
-				try {
-					//the list is empty but there is producer who might enqueue then wait
-					this.wait();
+		synchronized (m_InnerList) {
+			while (m_InnerList.size() == 0) {
+				try {	
+					if (ThreadManager.isRunning) {
+						m_InnerList.wait();						
+					}
+					
+					if (!ThreadManager.isRunning) {
+						m_InnerList.notifyAll();						
+						return null;
+					}
 				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
 					e.printStackTrace();
+
 				}
 			}
-			// returning the dequeued item and 'deleting' it from the queue
-			T toReturn = buffer[extractIndex];
-			buffer[extractIndex] = null;
-			extractIndex = (extractIndex+1)%buffer.length;
-			//updating the size
-			size--;
-			
-			this.notifyAll();
+
+			T toReturn = m_InnerList.get(m_InnerList.size() - 1);
+			m_InnerList.remove(toReturn);
+
+			m_InnerList.notifyAll();
 			return toReturn;
 		}
-		
-
 	}
 
-	/**
-	 * Enqueues an item to the end of this queue. If the queue is full, this 
-	 * method blocks until some space becomes available.
-	 * 
-	 * @param item Item to enqueue
-	 */
-	public void enqueue(T item) {
-		
-		synchronized (this) {
-			//if queue is full
-			while (this.size == buffer.length) {
-				try {
-					//wait for someone to enqueue and item
-					this.wait();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+	public ArrayList<T> getAllQueue() {
+		synchronized (m_InnerList) {
+			ArrayList<T> toReturn = new ArrayList<>();
+
+			for (T runner : m_InnerList) {
+				toReturn.add(runner);
 			}
-			//inserting a new item and updating the size of the queue
-			buffer[insertIndex] = item;
-			insertIndex = (insertIndex+1)%buffer.length;
-			size++;
-			this.notifyAll();
-			
-					
+
+			return toReturn;
 		}
-
 	}
 
-	/**
-	 * Returns the capacity of this queue
-	 * @return queue capacity
-	 */
-	public int getCapacity() {
-		return buffer.length;
-
-	}
-
-	/**
-	 * Returns the current size of the queue (number of elements in it)
-	 * @return queue size
-	 */
-	public int getSize() {
-		
-		return size;
+	public int getSize(){
+		synchronized (m_InnerList) {
+			return m_InnerList.size();
+		}
 	}
 	
-	/**
-	 * Registers a producer to this queue. This method actually increases the
-	 * internal producers counter of this queue by 1. This counter is used to
-	 * determine whether the queue is still active and to avoid blocking of
-	 * consumer threads that try to dequeue elements from an empty queue, when
-	 * no producer is expected to add any more items.
-	 * Every producer of this queue must call this method before starting to 
-	 * enqueue items, and must also call <see>{@link #unregisterProducer()}</see> when
-	 * finishes to enqueue all items.
-	 * 
-	 * @see #dequeue()
-	 * @see #unregisterProducer()
-	 */
-	public void registerProducer() {
-		synchronized (this) {
-			this.producers++;		
+	public boolean Exists(T item) {
+		synchronized (m_InnerList) {
+			for (T runner : m_InnerList) {
+				if (runner.equals(item)) {
+					return true;
+				}
+			}
+			
+			return false;
 		}
 	}
-
-	/**
-	 * Unregisters a producer from this queue. See <see>{@link #registerProducer()}</see>.
-	 * 
-	 * @see #dequeue()
-	 * @see #registerProducer()
-	 */
-	public void unregisterProducer() {
-		synchronized (this) {
-			this.producers--;
-			//notify all in case some thread is waiting for a producer to insert a new item
-			this.notifyAll();
+	
+	public void WakeAll(){
+		synchronized (m_InnerList) {
+			m_InnerList.notifyAll();
 		}
 	}
+	
 }
