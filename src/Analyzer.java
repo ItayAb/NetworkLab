@@ -47,7 +47,8 @@ public class Analyzer implements Runnable {
 						// handle case of image
 						System.out.println("Analzyer: it is an image");
 						// TODO: check extension supported
-						handleCaseOfImage(dequeuedHtml);
+						// handleCaseOfImage(dequeuedHtml);
+						HandleHTML(dequeuedHtml, HTML.TypeOfHTML.IMAGE);
 
 					} else if (contentTypeOfHtml.contains(VIDEO)) { // in case
 						System.out.println("Analzyer: it is an video"); // of
@@ -61,16 +62,28 @@ public class Analyzer implements Runnable {
 						// Document
 						// handle case of document
 					} else if (contentTypeOfHtml.contains("text")) {
-						System.out.println("content is text");
-						getImgLinks(dequeuedHtml);
-						getUrlLinks(dequeuedHtml); // TODO: can links have
-													// HTTP:// ?
+						HandleHTML(dequeuedHtml, HTML.TypeOfHTML.TEXT);
+						// int contentLenght =
+						// extractContentLength(dequeuedHtml); // TODO: should
+						// be done in different method using enum
+						// if (contentLenght != -1) {
+						// synchronized (m_ResultWrapper) {
+						// m_ResultWrapper.m_PageAggregator.m_NumOfPages++;
+						// m_ResultWrapper.m_PageAggregator.m_TotalSizeOfPagesInBytes+=
+						// contentLenght;
+						// }
+						// }
+						// System.out.println("(Data of page was aggregated) content is text");
+						// getImgLinks(dequeuedHtml);
+						// getUrlLinks(dequeuedHtml); // TODO: can links have
+						// HTTP:// ?
 					} else {
 						System.out.println("Downloader: Error in content type of " + dequeuedHtml.toString());
 					}
 				} catch (Exception e) {
-					System.out.println("Error couldnt find content type");
+					System.out.println("Couldnt get content type from: " + dequeuedHtml.GetHeader());
 					System.out.println(e.getMessage());
+					e.printStackTrace();
 				}
 			}
 		}
@@ -79,8 +92,71 @@ public class Analyzer implements Runnable {
 
 	}
 
+	private void HandleHTML(HTML dequeuedHtml, HTML.TypeOfHTML typeOfHtml) {
+		int contentLenght = extractContentLength(dequeuedHtml); 
+		switch (typeOfHtml) {
+		case TEXT:
+			if (contentLenght != -1) {
+				synchronized (m_ResultWrapper) {
+					m_ResultWrapper.m_PageAggregator.m_NumOfPages++;
+					m_ResultWrapper.m_PageAggregator.m_TotalSizeOfPagesInBytes += contentLenght;
+				}
+			}
+			System.out.println("(Data of page was aggregated) content is text");
+			getImgLinks(dequeuedHtml);
+			getUrlLinks(dequeuedHtml); // TODO: can links have
+										// HTTP:// ?
+			break;
+		case IMAGE:
+			if (contentLenght != -1) {
+				synchronized (m_ResultWrapper) {
+					m_ResultWrapper.m_ImageAggregator.m_NumOfImages++;
+					m_ResultWrapper.m_ImageAggregator.m_TotalSizeInBytes += contentLenght;
+				}
+			} else { // TODO: Delete this, deubgging purposes
+				System.out.println(dequeuedHtml.GetHeader() + " will not be aggregated!!!");
+			}
+			break;
+
+		default:
+			break;
+		}
+	}
+
 	private void handleCaseOfImage(HTML dequeuedHtml) {
 		// TODO Auto-generated method stub
+		int contentLength = extractContentLength(dequeuedHtml);
+		if (contentLength != -1) {
+			synchronized (m_ResultWrapper.m_ImageAggregator) {
+				m_ResultWrapper.m_ImageAggregator.m_NumOfImages++;
+				m_ResultWrapper.m_ImageAggregator.m_TotalSizeInBytes += contentLength;
+			}
+		} else {
+			System.out.println(dequeuedHtml.GetHeader() + " will not be aggregated!!!");
+		}
+		// int ContentLength = -1;
+		// String regex = "Content-Length:\\s+([\\d]*)";
+		// Pattern pat = Pattern.compile(regex);
+		// Matcher m = pat.matcher(dequeuedHtml.GetHeader());
+		// if (m.find()) {
+		// try {
+		// ContentLength = Integer.parseInt(m.group(1));
+		// System.out.println("content length is: " + ContentLength);
+		// // TODO: saveSomewhere
+		// synchronized (m_ResultWrapper.m_ImageAggregator) {
+		// m_ResultWrapper.m_ImageAggregator.m_NumOfImages++;
+		// m_ResultWrapper.m_ImageAggregator.m_TotalSizeInBytes +=
+		// ContentLength;
+		// }
+		// } catch (NumberFormatException e) {
+		// // TODO: handle exception
+		// System.out.println("Could not parse Content-Lenght header is malformed\n"
+		// + dequeuedHtml.GetHeader());
+		// }
+		// }
+	}
+
+	private int extractContentLength(HTML dequeuedHtml) {
 		int ContentLength = -1;
 		String regex = "Content-Length:\\s+([\\d]*)";
 		Pattern pat = Pattern.compile(regex);
@@ -89,16 +165,13 @@ public class Analyzer implements Runnable {
 			try {
 				ContentLength = Integer.parseInt(m.group(1));
 				System.out.println("content length is: " + ContentLength);
-				// TODO: saveSomewhere
-				synchronized (m_ResultWrapper.m_ImageAggregator) {
-					m_ResultWrapper.m_ImageAggregator.m_NumOfImages++;
-					m_ResultWrapper.m_ImageAggregator.m_TotalSizeInBytes += ContentLength;
-				}
 			} catch (NumberFormatException e) {
 				// TODO: handle exception
-				System.out.println("Could not parse Content-Lenght header is malformed\n" + dequeuedHtml.GetHeader());
+				System.out.println("Could not parse Content-Lenght, header is malformed\n" + dequeuedHtml.GetHeader());
 			}
 		}
+
+		return ContentLength;
 	}
 
 	private void getImgLinks(HTML dequeuedHtml) {
@@ -158,7 +231,7 @@ public class Analyzer implements Runnable {
 
 	private String getContentTypeFromHeader(String header) throws Exception {
 		String contentType = "";
-		String regex = "Content-Type: ([A-Za-z/]*)";
+		String regex = "Content-Type:\\s*([A-Za-z/]*)";
 		Pattern pat = Pattern.compile(regex);
 		Matcher m = pat.matcher(header);
 		if (m.find()) {

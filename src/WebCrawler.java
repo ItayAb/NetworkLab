@@ -31,7 +31,7 @@ public class WebCrawler {
 	private String m_NameOfCrawlIteration;
 	private String m_HtmlResultPage;
 	ThreadManager m_ThreadManager;	
-	private HashMap<String, String> m_LinkTextToActualLink;
+	private static HashMap<String, String> m_DomainToLinkPage;
 	private CrawlelResultForDomain m_ResultWrapper;
 	private SynchronizedQueue<Integer> m_PortScannerList;
 	private boolean m_IsStarting;
@@ -49,6 +49,8 @@ public class WebCrawler {
 		initParams();
 		m_IsStarting = false;
 		m_PortScannerList = new SynchronizedQueue<>();
+		m_ResultWrapper = new CrawlelResultForDomain();
+		m_DomainToLinkPage = new HashMap<>();
 		if (m_Domain.length() == 0) {
 			// TODO: throw exception ?
 		}		
@@ -138,10 +140,6 @@ public class WebCrawler {
 		
 	}
 
-	public void SendResults(){
-		// 
-		
-	}
 
 	private void startCrawling() throws Exception {
 		// TODO: update the time stamp m_TimeStamp =
@@ -184,6 +182,11 @@ public class WebCrawler {
 
 	private void endCrawling() throws IOException {
 		System.out.println("Crawling Ended!!");
+		System.out.println("updating static dictionary");
+		if (m_DomainToLinkPage.keySet().contains(m_Domain)) { //TODO: what if you crawled to same domain twice? what page to link?
+			System.out.println("Alreading crawled to this domain");
+		}
+		m_DomainToLinkPage.put(m_Domain, m_NameOfCrawlIteration);
 		// TODO Auto-generated method stub
 		createHtmlResultPage();
 		try {
@@ -227,16 +230,43 @@ public class WebCrawler {
 //		for (String linkInResultList : m_ListOfTraversedLinks) {
 //			htmlTable.append("<td>" + linkInResultList + "</td>\n");
 //		}
+		if (!m_IsDisrespectRobot) {
+			htmlTable.append("<td>Crawler Respected Robot.txt</td>\n"); // TODO: implement this
+		}
+		htmlTable.append("<td>Number Of Pages: " + m_ResultWrapper.m_ImageAggregator.m_NumOfImages + "</td>\n");
+		htmlTable.append("<td>Size Of Pages: " + m_ResultWrapper.m_ImageAggregator.m_TotalSizeInBytes + "</td>\n");
 		ArrayList<String> allLinks = m_ListOfTraversedLinks.getAllQueue();
+		// domains connected to
+		for (String domainCrawled : m_ResultWrapper.m_PageAggregator.m_DomainsItConnectedTo) {
+			if (m_DomainToLinkPage.containsKey(domainCrawled)) {
+				String linkToDomain = m_DomainToLinkPage.get(domainCrawled);
+				htmlTable.append("<td> <a href=" + linkToDomain + "> " + domainCrawled + "</a></td>\n");
+			}
+			else {
+				htmlTable.append("<td> " + domainCrawled + " </a></td>\n");
+			}
+		}
+		
+		// all links
 		for (String stringRunner : allLinks) {
 			htmlTable.append("<td>" + stringRunner + "</td>\n");
 		}
+		
+		// port Results
 		if (m_IsFullTCPPortScan) {
 			htmlTable.append("<td>" + "Ports" + "</td>\n");
 			for (Integer portScanned : m_PortScannerList.getAllQueue()) {
 				htmlTable.append("<td>" + portScanned.intValue() + "</td>\n");
 			}
 		}
+		
+		
+		// RTT
+		System.out.println("Total time RTT is : " + m_ResultWrapper.m_RttAggregator.m_TotalMilliseconds);
+		System.out.println("Total RTT are: " + m_ResultWrapper.m_RttAggregator.m_TotalAmountOfRTTs );
+		long averageRtt = m_ResultWrapper.m_RttAggregator.m_TotalMilliseconds / (long) m_ResultWrapper.m_RttAggregator.m_TotalAmountOfRTTs;
+		System.out.println("RTT average is : " + averageRtt );
+		htmlTable.append("<td>Average RTT: " + averageRtt + "</td>\n");
 		htmlTable.append("</tr>\n");
 
 		htmlTable.append("</table>\n");
@@ -256,7 +286,9 @@ public class WebCrawler {
 	private void initDownloaders() {
 		// TODO Auto-generated method stub
 		for (int i = 0; i < m_Downloaders.length; i++) {
-			m_Downloaders[i] = new Thread(new Downloader(m_ListOfTraversedLinks, m_ConfigData, m_UrlQueue, m_HtmlQueue, m_Domain, 8080));
+			m_Downloaders[i] = new Thread(new Downloader(m_ResultWrapper, m_ListOfTraversedLinks, m_ConfigData, m_UrlQueue, m_HtmlQueue, m_Domain, 8080));
 		}
 	}
+	
+	
 }

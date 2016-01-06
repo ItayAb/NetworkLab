@@ -74,6 +74,7 @@ public class HttpRequest implements Runnable {
 			// TODO: return the message "Crawler Started" "Crawler failed"
 		}
 		else { // all other cases than the above request the server serves as normal server
+			System.out.println("For some reason " + requestOfClient.Header.toString() + requestOfClient.Body.toString() + "End!");
 			responseHandler();
 		}
 	}
@@ -285,6 +286,8 @@ public class HttpRequest implements Runnable {
 
 		} catch (IOException e) {
 			System.out.println("Error in writing response to client!");
+			e.printStackTrace();
+			System.out.println("Error sending " + responseHeader + "*" );
 		} finally {
 			try {
 				if (writerToClient != null) {

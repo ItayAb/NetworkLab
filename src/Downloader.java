@@ -26,15 +26,16 @@ public class Downloader implements Runnable {
 	private String m_Domain;
 	private SynchronizedQueue<String> m_AllTraversedLinks;
 	private int m_Port;
+	private CrawlelResultForDomain m_resultCrawlerData;
 
-	public Downloader(SynchronizedQueue<String> AllTraversedLinks, ConfigData configurationData, SynchronizedQueue<String> m_UrlQueue, SynchronizedQueue<HTML> m_HtmlQueue, String Domain, int port) {
+	public Downloader(CrawlelResultForDomain resultCrawlerDatal, SynchronizedQueue<String> AllTraversedLinks, ConfigData configurationData, SynchronizedQueue<String> m_UrlQueue, SynchronizedQueue<HTML> m_HtmlQueue, String Domain, int port) {
 		m_DownloadQueue = m_UrlQueue;
 		m_AnalyzeQueue = m_HtmlQueue;
 		m_ConfigData = configurationData;
 		m_Domain = Domain;
 		m_Port = port;
 		m_AllTraversedLinks = AllTraversedLinks;
-		// m_AnalyzeQueue.registerProducer();
+		m_resultCrawlerData = resultCrawlerDatal;
 	}
 
 	@Override
@@ -56,6 +57,8 @@ public class Downloader implements Runnable {
 					System.out.println("domain is :" + m_Domain + " and port is: " + m_Port);
 					socketConnection = new Socket(m_Domain, m_Port);
 
+					long startTimeRTT = System.currentTimeMillis();		
+					System.out.println("Start time RTT! : " + startTimeRTT);
 					PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socketConnection.getOutputStream())));
 					System.out.println("GET /" + urlDequeued + " HTTP/1.0");
 					out.println("GET /" + urlDequeued + " HTTP/1.0");
@@ -70,7 +73,21 @@ public class Downloader implements Runnable {
 						
 					}
 					System.out.println(requestFromWeb.Header);
+					long readResponseStart = System.currentTimeMillis(); 
 					requestFromWeb.readFromSockect();
+					long readResponseEnd = System.currentTimeMillis();
+					long endTimeRTT = System.currentTimeMillis();
+					System.out.println("End time RTT!: "+ endTimeRTT);
+					synchronized (m_resultCrawlerData) {
+						System.out.println("startRTT:"+ startTimeRTT); //TODO: figure out why this is wrong
+						System.out.println("start RTT read:" + readResponseStart);
+						System.out.println("end RTT read:" + readResponseEnd);
+						System.out.println("endRTT:"  + endTimeRTT);
+						long RttTime = (endTimeRTT-startTimeRTT) - (readResponseEnd - readResponseStart);
+						m_resultCrawlerData.m_RttAggregator.m_TotalMilliseconds = RttTime ;
+						System.out.println("updating RTT with :" + RttTime);
+						m_resultCrawlerData.m_RttAggregator.m_TotalAmountOfRTTs++;
+					}
 					System.out.println("Downloader: read from queue and got\n " + requestFromWeb.Header);
 					// m_AnalyzeQueue.enqueue(new
 					// HTML(requestFromWeb.Header.toString(),

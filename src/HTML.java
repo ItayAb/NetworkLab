@@ -30,4 +30,12 @@ public class HTML {
 		String toString = m_Header + "\n\n" + m_Body;
 		return toString;
 	}
+	
+	public enum TypeOfHTML{
+		VIDEO,
+		IMAGE,
+		TEXT,
+		DOCUMENT,
+	}
 }
+
