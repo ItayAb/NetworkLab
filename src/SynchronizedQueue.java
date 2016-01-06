@@ -10,22 +10,22 @@ public class SynchronizedQueue<T> {
 	}
 
 	public void enqueue(T item) {
-		synchronized (m_InnerList) {
+		synchronized (this) {
 			m_InnerList.add(item);
-			m_InnerList.notifyAll();
+			this.notifyAll();
 		}
 	}
 
 	public T dequeue() {
-		synchronized (m_InnerList) {
+		synchronized (this) {
 			while (m_InnerList.size() == 0) {
 				try {	
 					if (ThreadManager.isRunning) {
-						m_InnerList.wait();						
+						this.wait();						
 					}
 					
 					if (!ThreadManager.isRunning) {
-						m_InnerList.notifyAll();						
+						this.notifyAll();						
 						return null;
 					}
 				} catch (InterruptedException e) {
@@ -38,13 +38,13 @@ public class SynchronizedQueue<T> {
 			T toReturn = m_InnerList.get(m_InnerList.size() - 1);
 			m_InnerList.remove(toReturn);
 
-			m_InnerList.notifyAll();
+			this.notifyAll();
 			return toReturn;
 		}
 	}
 
 	public ArrayList<T> getAllQueue() {
-		synchronized (m_InnerList) {
+		synchronized (this) {
 			ArrayList<T> toReturn = new ArrayList<>();
 
 			for (T runner : m_InnerList) {
@@ -56,13 +56,13 @@ public class SynchronizedQueue<T> {
 	}
 
 	public int getSize(){
-		synchronized (m_InnerList) {
+		synchronized (this) {
 			return m_InnerList.size();
 		}
 	}
 	
 	public boolean Exists(T item) {
-		synchronized (m_InnerList) {
+		synchronized (this) {
 			for (T runner : m_InnerList) {
 				if (runner.equals(item)) {
 					return true;
@@ -71,12 +71,5 @@ public class SynchronizedQueue<T> {
 			
 			return false;
 		}
-	}
-	
-	public void WakeAll(){
-		synchronized (m_InnerList) {
-			m_InnerList.notifyAll();
-		}
-	}
-	
+	}		
 }

@@ -14,8 +14,8 @@ public class ConfigData {
 	private final String MAX_THREADS = "maxThreads";
 	private final String MAX_DOWNLOADERS = "maxDownloaders";
 	private final String MAX_ANALYZERS = "maxAnalyzers";
-	private final String IMAGE_EXTENSION = "defaultPage";
-	private final String VIDEO_EXTENSION = "maxThreads";
+	private final String IMAGE_EXTENSION = "imageExtensions"; 
+	private final String VIDEO_EXTENSION = "videoExtensions";
 	private final String DOCUMENT_EXTENSION = "documentExtension";
 
 	// variables to hold the data

@@ -46,7 +46,7 @@ public class ThreadManager {
 
 	public static void updateStateAnalyzer(boolean isWait) {
 		synchronized (Lock) {
-			
+
 			if (isWait) {
 				m_AnalyzerWaiting++;
 				if (m_AnalyzerWaiting == m_MaxAnalyzer) {
@@ -64,15 +64,19 @@ public class ThreadManager {
 
 	public static void checkIfEndOfCrawl() {
 
-		System.out.println("!!! checking end of crawl!!!");
-		if (m_Html.getSize() == 0 && m_Urls.getSize() == 0) {
-			System.out.println("m_Html.getSize() "+m_Html.getSize()+" && m_Urls.getSize()"+ m_Urls.getSize()+"");
-			if (m_AnalyzerWaiting == m_MaxAnalyzer && m_DownloaderWaiting == m_MaxDownloader) {
-				System.out.println("!!!!!Crawl need to end!!!!!!!");
-				isRunning = false;
-				m_Html.WakeAll();
-				m_Urls.WakeAll();
-				System.out.println("after wake up isRunning is: " + isRunning);
+		synchronized (m_Urls) {
+			synchronized (m_Html) {
+				System.out.println("!!! checking end of crawl!!!");
+				if (m_Html.getSize() == 0 && m_Urls.getSize() == 0) {
+					System.out.println("m_Html.getSize() " + m_Html.getSize() + " && m_Urls.getSize()" + m_Urls.getSize() + "");
+					if (m_AnalyzerWaiting == m_MaxAnalyzer && m_DownloaderWaiting == m_MaxDownloader) {
+						System.out.println("!!!!!Crawl need to end!!!!!!!");
+						isRunning = false;
+						m_Html.notifyAll();
+						m_Urls.notifyAll();
+						System.out.println("after wake up isRunning is: " + isRunning);
+					}
+				}
 			}
 		}
 

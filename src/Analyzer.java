@@ -11,32 +11,34 @@ public class Analyzer implements Runnable {
 												// the prefix for this
 	private SynchronizedQueue<String> m_DownloadQueue;
 	private SynchronizedQueue<HTML> m_AnalyzeQueue;
-//	private SynchronousQueue<String> m_DownloadQueue;
-//	private SynchronousQueue<HTML> m_AnalyzeQueue;
+	// private SynchronousQueue<String> m_DownloadQueue;
+	// private SynchronousQueue<HTML> m_AnalyzeQueue;
 	private SynchronizedQueue<String> m_AllTraversedLinks;
 	private String m_Domain;
 	private CrawlelResultForDomain m_ResultWrapper;
+	private ConfigData m_ConfigData;
 
-	public Analyzer(SynchronizedQueue<String> TraversedListForThisThread, SynchronizedQueue<String> m_UrlQueue, SynchronizedQueue<HTML> m_HtmlQueue, String domain, CrawlelResultForDomain resultWrapper) {
+	public Analyzer(ConfigData configData, SynchronizedQueue<String> AllTraversedLinks, SynchronizedQueue<String> m_UrlQueue, SynchronizedQueue<HTML> m_HtmlQueue, String domain,
+			CrawlelResultForDomain resultWrapper) {
 		m_DownloadQueue = m_UrlQueue;
 		m_AnalyzeQueue = m_HtmlQueue;
-		m_AllTraversedLinks = TraversedListForThisThread;
-		//m_DownloadQueue.registerProducer();
+		// m_DownloadQueue.registerProducer();
 		m_Domain = domain;
 		m_ResultWrapper = resultWrapper;
+		m_AllTraversedLinks = AllTraversedLinks;
+		m_ConfigData = configData;
 	}
 
 	@Override
 	public void run() {
 
 		while (ThreadManager.isRunning) {// m_DownloadQueue.getSize() !=0 ||
-						// m_AnalyzeQueue.getSize() != 0) { // TODO: think about
-						// this condition
-			//HTML dequeuedHtml = m_AnalyzeQueue.dequeue();
+			// m_AnalyzeQueue.getSize() != 0) { // TODO: think about
+			// this condition
+			// HTML dequeuedHtml = m_AnalyzeQueue.dequeue();
 			ThreadManager.updateStateAnalyzer(true);
 			HTML dequeuedHtml = m_AnalyzeQueue.dequeue();
 			if (dequeuedHtml != null) {
-				
 				ThreadManager.updateStateAnalyzer(false);
 				System.out.println("Analyzer: dequeued: \n Header:\n" + dequeuedHtml.GetHeader());
 				try {
@@ -44,26 +46,31 @@ public class Analyzer implements Runnable {
 					if (contentTypeOfHtml.contains(IMAGE)) { // in case of image
 						// handle case of image
 						System.out.println("Analzyer: it is an image");
-						//TODO: check extension supported
-						handleCaseOfImage(dequeuedHtml);	
-						
+						// TODO: check extension supported
+						handleCaseOfImage(dequeuedHtml);
+
 					} else if (contentTypeOfHtml.contains(VIDEO)) { // in case
-						System.out.println("Analzyer: it is an video");											// of Video
+						System.out.println("Analzyer: it is an video"); // of
+																		// Video
 						// handle case of video
 					} else if (contentTypeOfHtml.contains(DOCUMENT)) { // in
-																		// case
-					System.out.println("Analzyer: it is an document");											// 											// of
-																		// Document
+						// TODO: what is the command for document? <a href? <doc
+						// src=? // case
+						System.out.println("Analzyer: it is an document"); // //
+																			// of
+						// Document
 						// handle case of document
 					} else if (contentTypeOfHtml.contains("text")) {
 						System.out.println("content is text");
 						getImgLinks(dequeuedHtml);
-						getUrlLinks(dequeuedHtml); // TODO: can links have HTTP:// ?
+						getUrlLinks(dequeuedHtml); // TODO: can links have
+													// HTTP:// ?
 					} else {
 						System.out.println("Downloader: Error in content type of " + dequeuedHtml.toString());
 					}
 				} catch (Exception e) {
 					System.out.println("Error couldnt find content type");
+					System.out.println(e.getMessage());
 				}
 			}
 		}
@@ -93,10 +100,24 @@ public class Analyzer implements Runnable {
 			}
 		}
 	}
-	
+
 	private void getImgLinks(HTML dequeuedHtml) {
 		// TODO Auto-generated method stub
-		String regex = "<(img|IMG)\\s+(src|SRC)=\"(.*?)\"";
+		String[] allValidExtension = m_ConfigData.getImageExtensions();
+		StringBuilder extenstionAddToRegex = new StringBuilder();
+		extenstionAddToRegex.append("(");
+		for (int i = 0; i < allValidExtension.length; i++) {
+			if (i == allValidExtension.length - 1) {
+				extenstionAddToRegex.append(allValidExtension[i].toLowerCase() + "|");
+				extenstionAddToRegex.append(allValidExtension[i].toUpperCase() + ")");
+			} else {
+				extenstionAddToRegex.append(allValidExtension[i].toLowerCase() + "|");
+				extenstionAddToRegex.append(allValidExtension[i].toUpperCase() + "|");
+			}
+		}
+
+		String regex = "<(img|IMG)\\s+(src|SRC)=\"(.*?\\." + extenstionAddToRegex.toString() + ")\"";
+		System.out.println("Regex for image is " + regex);
 		Pattern pattern = Pattern.compile(regex);
 		Matcher m = pattern.matcher(dequeuedHtml.GetBody());
 		System.out.println("fetching  image links");
@@ -104,18 +125,21 @@ public class Analyzer implements Runnable {
 			String link = m.group(3);
 			System.out.println("enqueue to Downloader: " + link);
 			if (!m_AllTraversedLinks.Exists(link)) {
-//				m_DownloadQueue.enqueue(link);
+				// m_DownloadQueue.enqueue(link);
 				m_DownloadQueue.enqueue(link);
-				m_AllTraversedLinks.enqueue(link);
+				// m_AllTraversedLinks.enqueue(link);
 				System.out.println("Analyzer: adding image link: " + link);
 			}
 		}
-		System.out.println("Done with fetching image links");		
+		System.out.println("Done with fetching image links");
 	}
 
-	private void getUrlLinks(HTML dequeuedHtml){
-		//String regex = "<(a|A) (href|HREF)=\"(http|HTTP)://" + m_Domain + "/(.*?)\">";
-		String regex = "<(a|A)\\s+(href|HREF)=\"(?!#)(.*?)\">";
+	private void getUrlLinks(HTML dequeuedHtml) {
+		// String regex = "<(a|A) (href|HREF)=\"(http|HTTP)://" + m_Domain +
+		// "/(.*?)\">";
+		String regex = "<(a|A)\\s+(href|HREF)=\"(?!#)(.*?)\">"; // TODO: do HTTP
+																// prefix means
+																// its external?
 		Pattern pattern = Pattern.compile(regex);
 		Matcher m = pattern.matcher(dequeuedHtml.GetBody());
 		System.out.println("fetching links");
@@ -123,15 +147,15 @@ public class Analyzer implements Runnable {
 			String link = m.group(3);
 			System.out.println("enqueue to Downloader: " + link);
 			if (!m_AllTraversedLinks.Exists(link)) {
-//				m_DownloadQueue.enqueue(link);
+				// m_DownloadQueue.enqueue(link);
 				m_DownloadQueue.enqueue(link);
-				m_AllTraversedLinks.enqueue(link);
+				// m_AllTraversedLinks.enqueue(link);
 				System.out.println("Analyzer: adding link: " + link);
 			}
 		}
-		System.out.println("Done with fetching links");	
+		System.out.println("Done with fetching links");
 	}
-	
+
 	private String getContentTypeFromHeader(String header) throws Exception {
 		String contentType = "";
 		String regex = "Content-Type: ([A-Za-z/]*)";
